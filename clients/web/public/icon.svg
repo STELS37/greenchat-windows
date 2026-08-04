@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Green Chat">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#19bd6e"/>
+      <stop offset="1" stop-color="#0d9853"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <path fill="#ffffff" d="M256 120c-83 0-150 55-150 123 0 39 22 74 57 96l-16 53 59-31c15 3 32 5 50 5 83 0 150-55 150-123S339 120 256 120z"/>
+  <g fill="#0d9853">
+    <circle cx="200" cy="243" r="20"/>
+    <circle cx="256" cy="243" r="20"/>
+    <circle cx="312" cy="243" r="20"/>
+  </g>
+</svg>

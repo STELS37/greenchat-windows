@@ -1,0 +1,241 @@
+name: windows-artifacts
+run-name: Windows ${{ github.sha }}
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      server_origin:
+        description: HTTPS GreenChat backend origin baked into the application
+        required: true
+        default: https://greenchat.globalsystem.cc
+        type: string
+      publish_release:
+        description: Publish verified SignPath outputs as a GitHub prerelease
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: greenchat-windows-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GC_SOURCE_SHA: ${{ github.sha }}
+  GC_BUILD_ID: ${{ github.sha }}
+  GC_SERVER: ${{ inputs.server_origin || 'https://greenchat.globalsystem.cc' }}
+  GC_BUILD_JOBS: '2'
+  # Current measured payload is 300.7 KiB gzip; retain a strict ceiling with only 0.3 KiB headroom.
+  GC_BUNDLE_BUDGET_KB: '301'
+  GC_VCPKG_ROOT: C:\vcpkg
+  VCPKG_DISABLE_METRICS: '1'
+
+jobs:
+  source-validation:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.0'
+          cache: npm
+          cache-dependency-path: clients/package-lock.json
+      - name: Install locked JavaScript dependencies
+        working-directory: clients
+        run: npm ci --ignore-scripts
+      - name: Type-check public client source
+        working-directory: clients
+        run: npm run check
+      - name: Build staged public web payload
+        working-directory: clients
+        env:
+          GC_WEB_OUT_DIR: ${{ runner.temp }}/greenchat-public-web
+          GC_UPDATE_MANIFEST_OUT: ${{ runner.temp }}/greenchat-public-update-manifest.json
+        run: npm run build:web
+      - name: Validate Windows release contracts
+        run: |
+          node scripts/build-windows-desktop.mjs --self-check
+          node --test scripts/build-windows-desktop.test.mjs
+      - name: Reject generated changes
+        run: git diff --exit-code
+
+  build-unsigned:
+    if: github.event_name == 'workflow_dispatch'
+    needs: source-validation
+    runs-on: windows-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: windows-x64
+            arch: x64
+            rust_target: x86_64-pc-windows-msvc
+            msvc_arch: amd64
+          - id: windows-arm64
+            arch: arm64
+            rust_target: aarch64-pc-windows-msvc
+            msvc_arch: amd64_arm64
+    steps:
+      - name: Check out exact public source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prove source identity
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ((git rev-parse HEAD).Trim() -ne $env:GC_SOURCE_SHA) { throw 'checkout SHA mismatch' }
+          if (git status --porcelain) { throw 'checkout is dirty before build' }
+          if ($env:GC_SERVER -notmatch '^https://') { throw 'GC_SERVER must use HTTPS' }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.0'
+          cache: npm
+          cache-dependency-path: clients/package-lock.json
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Export MSVC build tools
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.msvc_arch }}
+
+      - name: Cache Rust outputs
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './clients/desktop/src-tauri -> target'
+          key: ${{ matrix.rust_target }}
+
+      - name: Cache pinned TDLib native build
+        uses: actions/cache@v4
+        with:
+          path: var/build/tdlib
+          key: tdlib-windows-${{ matrix.arch }}-${{ hashFiles('clients/third_party/tdlib/PINNED.env') }}
+
+      - name: Install native build prerequisites
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          choco install gperf php -y --no-progress
+          npm.cmd install --global '@tauri-apps/cli@2.11.4'
+          foreach ($tool in @('cmake.exe','dumpbin.exe','gperf.exe','php.exe','tauri')) {
+            if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool is unavailable" }
+          }
+          if (-not (Test-Path (Join-Path $env:GC_VCPKG_ROOT 'vcpkg.exe'))) { throw 'vcpkg.exe is unavailable' }
+
+      - name: Build unsigned reproducible candidate
+        id: build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'greenchat-windows-build'
+          node scripts/build-windows-desktop.mjs --arch '${{ matrix.arch }}' --out $out --allow-unsigned
+          $payload = Join-Path $env:RUNNER_TEMP 'signpath-input'
+          & scripts/prepare-signpath-payload.ps1 `
+            -BuildOutput $out `
+            -RustTarget '${{ matrix.rust_target }}' `
+            -Arch '${{ matrix.arch }}' `
+            -OutputDirectory $payload
+          $version = [string](Get-Content config/client-release.json -Raw | ConvertFrom-Json).current_version
+          "payload=$payload" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Upload unsigned GitHub artifact for origin verification
+        id: upload-unsigned-artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: GreenChat-${{ matrix.id }}-unsigned-${{ github.sha }}
+          path: ${{ steps.build.outputs.payload }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Submit signing request to SignPath
+        id: signpath
+        if: vars.SIGNPATH_ENABLED == '1'
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned-artifact.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: ${{ runner.temp }}\signpath-signed
+          parameters: |
+            version: ${{ toJSON(steps.build.outputs.version) }}
+
+      - name: Explain unsigned onboarding artifact
+        if: vars.SIGNPATH_ENABLED != '1'
+        shell: pwsh
+        run: |
+          Write-Host 'SignPath onboarding is not enabled. The uploaded artifact is intentionally unsigned and must not be published as trusted.'
+
+      - name: Verify SignPath publisher and assemble release
+        id: finalize
+        if: vars.SIGNPATH_ENABLED == '1'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'greenchat-signed-release'
+          & scripts/finalize-signpath-release.ps1 `
+            -SignedDirectory (Join-Path $env:RUNNER_TEMP 'signpath-signed') `
+            -Arch '${{ matrix.arch }}' `
+            -OutputDirectory $out
+          "release=$out" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Upload verified signed release candidate
+        if: vars.SIGNPATH_ENABLED == '1'
+        uses: actions/upload-artifact@v7
+        with:
+          name: GreenChat-${{ matrix.id }}-signed-${{ github.sha }}
+          path: ${{ steps.finalize.outputs.release }}
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+  publish-release:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_release && vars.SIGNPATH_ENABLED == '1'
+    needs: build-unsigned
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: GreenChat-windows-*-signed-${{ github.sha }}
+          path: artifacts
+          merge-multiple: true
+      - name: Publish exact-SHA prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./config/client-release.json').current_version")"
+          tag="windows-v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" artifacts/* --clobber
+          else
+            gh release create "$tag" artifacts/* \
+              --target "$GITHUB_SHA" \
+              --title "GreenChat for Windows ${version}" \
+              --notes "Signed from public commit $GITHUB_SHA. Free code signing provided by SignPath.io, certificate by SignPath Foundation." \
+              --prerelease
+          fi

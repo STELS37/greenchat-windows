@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schemas.tauri.app/config/2",
+  "productName": "GreenChat",
+  "identifier": "app.greenchat.desktop",
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://greenchat.globalsystem.cc/v1/client/updates/{{target}}/{{arch}}?version={{current_version}}&bundle_type={{bundle_type}}"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis",
+      "msi"
+    ],
+    "createUpdaterArtifacts": true,
+    "publisher": "SignPath Foundation",
+    "resources": {
+      "resources/tdlib/": null,
+      "resources/tdlib/tdjson.dll": "tdlib/tdjson.dll",
+      "resources/tdlib/BUILD-MANIFEST.windows.txt": "tdlib/BUILD-MANIFEST.txt",
+      "resources/tdlib/TDLIB_LICENSE_1_0.txt": "tdlib/TDLIB_LICENSE_1_0.txt",
+      "resources/tdlib/OPENSSL_LICENSE.txt": "tdlib/OPENSSL_LICENSE.txt",
+      "resources/tdlib/README.md": "tdlib/README.md"
+    },
+    "windows": {
+      "allowDowngrades": false,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com",
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico",
+        "startMenuFolder": "GreenChat",
+        "displayLanguageSelector": false
+      },
+      "wix": {
+        "language": "ru-RU"
+      }
+    }
+  }
+}

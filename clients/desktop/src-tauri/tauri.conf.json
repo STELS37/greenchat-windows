@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schemas.tauri.app/config/2",
+  "productName": "Green Chat",
+  "version": "1.0.0-beta.6",
+  "identifier": "app.greenchat.desktop",
+  "build": {
+    "frontendDist": "../../web/dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'"
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "greenchat",
+          "gcpay"
+        ]
+      }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQ5Mzc5QTQ4OEI3NzEwMkIKUldRckVIZUxTSm8zMll1b05OWmdQS0dPbGdqa0ttbFVmVG93WlBxWHovbEc3cDdJRFlNaE11VUsK",
+      "endpoints": [
+        "https://greenchat.globalsystem.cc/v1/client/updates/{{target}}/{{arch}}?version={{current_version}}&bundle_type={{bundle_type}}"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "appimage",
+      "deb"
+    ],
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "category": "SocialNetworking",
+    "shortDescription": "Green Chat desktop",
+    "longDescription": "GreenChat — отдельное настольное приложение с синхронизацией чатов, звонков и файлов.",
+    "linux": {
+      "deb": {
+        "depends": [
+          "libwebkit2gtk-4.1-0",
+          "libgtk-3-0",
+          "libayatana-appindicator3-1"
+        ]
+      }
+    },
+    "resources": {
+      "resources/tdlib/": "tdlib/"
+    }
+  }
+}

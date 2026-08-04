@@ -1,0 +1,147 @@
+/* clients/web/src/brand.css — V95, the GreenChat brand layer (owner directive 2026-07-30, B-P1-2/3/6).
+ *
+ * Loaded last, after styles.css and redesign.css, so it can correct the shipped palette without
+ * touching either file: the two pre-beta executors work in one tree, and redesign.css currently
+ * carries the other executor's uncommitted layers (V90/V91/V92). This file is the P1 surface.
+ *
+ * Measured defect (probes var/ux-audit/tools/m_hue_v94.mjs + a pixel read of the V93 sweep,
+ * 390x844, deviceScaleFactor 2, ru-RU, 2026-07-30):
+ *
+ *   1. One section painted a colour that exists nowhere else in the product. Every screen sampled
+ *      at x=8 down the page canvas stayed inside the brand arc — chats h152, calls h183, wallet h40
+ *      — while «Ещё» measured h248 s79 l96 at the top of the page, h219 and h213 at y=120/240, i.e.
+ *      a cold violet-to-blue-grey canvas over the whole first third of the screen. Its two group
+ *      eyebrows («СЕРВИСЫ», «НАСТРОЙКИ И АККАУНТ») measured h245 s53 l51 — 4257px² of violet type —
+ *      and the «Перенос данных» tile mark is #7b82fd. The tone came from V78, which gave each
+ *      section one of the four declared 500-colours and reached for --gc-violet-500 twice; the
+ *      token was declared but never earned a place in the identity. A messenger whose name is
+ *      GreenChat has no violet screen.
+ *
+ *   2. The hub had a tone but no signature. B-P1-1 turned «Ещё» into a service hub, yet the screen
+ *      still opened on a white card on a tinted canvas — the same silhouette as every other list.
+ *      Nothing on it said GreenChat; the section was told apart only by a wash 11% strong.
+ *
+ * What this layer does:
+ *
+ *   A. Closes the palette. GreenChat owns one continuous arc — amber (h40, money) → brand green
+ *      (h152) → teal (h183). Nothing outside 30..200 is painted. The hub becomes the neutral
+ *      container it is (its services carry the colour), and «Перенос данных»/«Карты» move onto arc
+ *      tones. --gc-violet-500 keeps existing for legacy callers but is repainted in-arc here, so a
+ *      forgotten data-tone="violet" cannot leak a foreign hue into a release again.
+ *
+ *   B. Gives the hub its signature: the account row becomes a brand plate — the AA-checked
+ *      --gc-accent-grad, white type, and the shipped speech-bubble mark as a watermark. It is the
+ *      one deliberate piece of brand graphics on a phone-reachable screen, and it separates «Ещё»
+ *      from «Чаты» by silhouette instead of by a hue borrowed from another product.
+ *
+ * Contrast (WCAG 1.4.3, measured against the darkest and lightest stop of --gc-accent-grad,
+ * #17874d and #0a6a3d): white on the plate 5.03:1 / 6.86:1 — the name and the handle both clear AA;
+ * the handle is kept at 100% white and separated by size/weight, not by opacity, because 82% white
+ * on #17874d measures 3.6:1 and would fail.
+ */
+
+/* ── A. The palette arc ───────────────────────────────────────────────────────────────────────── */
+
+/* The tone marks of the hub are bound by the V73 guard to the pinned avatar palette (light stop at
+   >= 3.25:1 against a white glyph), so this layer adds no new paint: the two violet tiles move onto
+   palette colours that are on the arc (see app.ts — «Карты» to amber, «Перенос данных» to green).
+   What stays here is the leak guard: if any screen ever asks for the violet tone again, it is served
+   the brand green mark instead of #7b82fd, so a forgotten attribute cannot ship a foreign hue. */
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-more-tile-icon[data-tone="violet"] { --gc-tile-mark: linear-gradient(145deg, #0ba52f 0%, #088c26 100%); }
+
+/* Contact avatars keep the full eight-colour palette on purpose: those discs stand for PEOPLE, not
+   for the product, and a per-name colour is how a list of faces stays scannable. The arc rule is
+   about chrome — washes, eyebrows, marks, headers — which is what makes a screen look like it
+   belongs to another app. */
+
+/* The hub is a container for coloured services, so it is the one section with no tone of its own:
+   its identity is the plate below, not a wash. The eyebrows return to brand ink. */
+.gc-superapp[data-gc-section="settings"] {
+  --gc-section: var(--gc-brand-500);
+  --gc-section-ink: var(--gc-accent-strong);
+  --gc-section-wash: color-mix(in srgb, var(--gc-brand-500) 5%, transparent);
+}
+/* Import is a flow of its own and keeps a tone — teal, the cool end of the arc. */
+.gc-superapp[data-gc-section="import"] {
+  --gc-section: var(--gc-cyan-500);
+  --gc-section-ink: #0a6f7a;
+  --gc-section-wash: color-mix(in srgb, var(--gc-cyan-500) 11%, transparent);
+}
+
+/* ── B. The hub's brand plate ─────────────────────────────────────────────────────────────────── */
+
+/* Only on the hub: the settings-only build (no service ports) keeps the quiet white card, because
+   there the screen really is a list of settings and a brand plate would be decoration. */
+.gc-settings-index.is-hub > .gc-account-card {
+  position: relative;
+  overflow: hidden;
+  background: var(--gc-accent-grad);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 10px 24px -14px rgba(10, 106, 61, 0.75);
+}
+/* The shipped mark (clients/web/public/icon.svg — the same speech bubble as the launcher icon and
+   the favicon), knocked out in white at 12% and bled off the trailing edge. Decoration only: it
+   carries no information, sits behind the copy and is hidden from assistive tech by being paint. */
+.gc-settings-index.is-hub > .gc-account-card::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: -22px;
+  inset-block-start: -18px;
+  width: 128px;
+  height: 128px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cpath fill='%23ffffff' d='M256 120c-83 0-150 55-150 123 0 39 22 74 57 96l-16 53 59-31c15 3 32 5 50 5 83 0 150-55 150-123S339 120 256 120z'/%3E%3C/svg%3E");
+  opacity: 0.12;
+  pointer-events: none;
+}
+.gc-settings-index.is-hub > .gc-account-card > * { position: relative; z-index: 1; }
+.gc-settings-index.is-hub > .gc-account-card:active {
+  background: var(--gc-accent-grad);
+  filter: brightness(0.94);
+}
+/* The identity disc: the per-name avatar palette (a red or magenta disc) is what a coloured plate
+   cannot host, so on the plate the disc is white glass with white initials. */
+.gc-settings-index.is-hub > .gc-account-card .gc-account-card-avatar {
+  background: rgba(255, 255, 255, 0.18);
+  background-image: none;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+}
+.gc-settings-index.is-hub > .gc-account-card .gc-account-card-name,
+.gc-settings-index.is-hub > .gc-account-card .gc-account-card-handle { color: #ffffff; }
+.gc-settings-index.is-hub > .gc-account-card .gc-account-card-handle { font-weight: var(--gc-weight-medium, 500); }
+.gc-settings-index.is-hub > .gc-account-card .gc-account-card-chevron { color: #ffffff; opacity: 0.85; }
+/* While /v1/users/me is in flight the card shimmers; on the plate the grey skeleton would read as a
+   rendering fault, so the same shapes shimmer in white glass. */
+.gc-settings-index.is-hub > .gc-account-card .gc-skeleton-line,
+.gc-settings-index.is-hub > .gc-account-card .gc-avatar.is-loading {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* ── C. Section identity in the first 60px ────────────────────────────────────────────────────────
+ *
+ * Measured before this block (probe var/ux-audit/tools/m_sectionid_v96.mjs, 390x844, the average
+ * colour of the top 18% of each screen): chats h148 s40 l94, calls h178 s35 l90, wallet h54 s33 l94,
+ * «Ещё» h150 s29 l63 (the plate). The pairs that a user actually swipes between measured
+ * chats↔calls Δhue 29° / Δlight 3 — a difference that exists in a colour picker and disappears at
+ * arm's length. The tone tokens were right; they were simply too quiet to do the job the wash was
+ * introduced for.
+ *
+ * Raising the wash is the whole fix: the header keeps the same gradient recipe from the redesign
+ * layer, only with more of the section's own colour in it. Ink is untouched — the titles are the
+ * near-black --gc-text on a tint of l>=88, which stays far above AA.
+ */
+.gc-superapp[data-gc-section="chats"],
+.gc-superapp[data-gc-section="feed"] {
+  --gc-section-wash: color-mix(in srgb, var(--gc-brand-500) 17%, transparent);
+}
+.gc-superapp[data-gc-section="calls"] {
+  --gc-section-wash: color-mix(in srgb, var(--gc-cyan-500) 24%, transparent);
+}
+.gc-superapp[data-gc-section="wallet"],
+.gc-superapp[data-gc-section="exchange"] {
+  --gc-section-wash: color-mix(in srgb, var(--gc-gold-500) 24%, transparent);
+}

@@ -1,0 +1,87 @@
+<!doctype html>
+<!-- T-715: the English mirror of /welcome/ (see index.html for the full design notes). Static,
+     zero-JS, same-origin links only, served under the strict CSP (default-src 'self'). -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e1114" />
+    <title>Green Chat — the messenger that never asks for your phone number</title>
+    <meta name="description" content="Green Chat is a messenger with no mandatory phone number: an offline queue, recovery after disconnects, undo for queued actions, and clear privacy controls." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Green Chat" />
+    <meta property="og:title" content="Green Chat — the messenger that never asks for your phone number" />
+    <meta property="og:description" content="Sign in without SMS, recover delivery after disconnects, choose the server explicitly, and control profile privacy." />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="ru_RU" />
+    <link rel="alternate" hreflang="ru" href="/welcome/" />
+    <link rel="alternate" hreflang="en" href="/welcome/en.html" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/welcome/welcome.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="top">
+        <div class="brand">
+          <img src="/icon.svg" alt="" width="40" height="40" />
+          <span>Green Chat</span>
+        </div>
+        <nav class="lang" aria-label="Page language">
+          <a href="/welcome/" lang="ru" hreflang="ru">RU</a>
+          <span aria-current="page">EN</span>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <h1>The messenger that never asks for your phone&nbsp;number</h1>
+        <p class="tagline">
+          Green Chat is a fast, honest messenger: an account is just a @username and a password,
+          delivery recovers after disconnects, and privacy controls remain understandable.
+        </p>
+        <p class="cta">
+          <a class="btn" href="/">Open Green Chat</a>
+        </p>
+      </section>
+
+      <section class="features" aria-label="What makes Green Chat different">
+        <article>
+          <h2>No phone number required</h2>
+          <p>A @username and password are enough to register. A number and SMS are optional; phone and e-mail values are never shown to other users.</p>
+        </article>
+        <article>
+          <h2>Messages survive disconnects</h2>
+          <p>Outgoing work waits for connectivity and resumes when the network returns, while missed events are recovered from the server cursor without duplicates.</p>
+        </article>
+        <article>
+          <h2>Undo before the operation commits</h2>
+          <p>A send or deletion can be cancelled for five seconds while the operation is still held in the local queue.</p>
+        </article>
+        <article>
+          <h2>Choose the server before sign-in</h2>
+          <p>The server address is selected explicitly before authentication. The client sends application traffic only to that chosen host, and changing it remains a deliberate user action.</p>
+        </article>
+        <article>
+          <h2>Profile privacy controls</h2>
+          <p>Phone and e-mail values are not published in the profile. The app provides visibility settings, contact controls, and blocking for unwanted users.</p>
+        </article>
+      </section>
+
+      <section class="hero">
+        <p class="cta">
+          <a class="btn" href="/">Open Green Chat</a>
+        </p>
+      </section>
+
+      <footer class="foot">
+        <nav aria-label="Documents and status">
+          <a href="/legal/tos/">Terms of Service</a>
+          <a href="/legal/privacy/">Privacy Policy</a>
+          <a href="/health">Server status</a>
+        </nav>
+        <p class="fine">Green Chat is free software (AGPL-3.0). The core is free and will stay free.</p>
+      </footer>
+    </main>
+  </body>
+</html>

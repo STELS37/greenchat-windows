@@ -1,0 +1,32 @@
+{
+  "name": "green-chat-clients",
+  "version": "1.0.0-beta.6",
+  "private": true,
+  "description": "Green Chat client codebase (vanilla TS, no frameworks): core SDK, UI, web/PWA, desktop and mobile shells.",
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit -p tsconfig.json",
+    "check:messenger": "node typecheck_store_profile.mjs",
+    "build:web": "node build.mjs",
+    "build:linux": "node ../scripts/build-linux-desktop.mjs",
+    "build:messenger:direct-apk": "npm --prefix mobile run build:messenger:direct-apk",
+    "build:messenger:test-apk": "npm --prefix mobile run build:messenger:test-apk",
+    "build:messenger:store-aab": "npm --prefix mobile run build:messenger:store-aab",
+    "test": "node --test \"*.test.mjs\" \"scripts/*.test.mjs\" && node --test --test-concurrency=1 \"core/test/**/*.test.ts\" && node --test \"ui/test/**/*.test.ts\"",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "check:desktop": "bash desktop/check.sh",
+    "test:linux-release": "node --test ../scripts/build-linux-desktop.test.mjs",
+    "check:mobile": "bash mobile/check.sh",
+    "check:telegram-web-secrets": "node scripts/check-telegram-web-secrets.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.28.1",
+    "libsodium-wrappers-sumo": "^0.8.4",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "livekit-client": "2.21.0"
+  }
+}

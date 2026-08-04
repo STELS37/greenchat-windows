@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- T-715: static marketing/landing page «что такое Green Chat». Lives entirely under web/public/
+     (copied verbatim to dist by build.mjs), so it ships ZERO JavaScript and adds ZERO bytes to the
+     app bundle. Served by the server's static path at GET /welcome/ under the strict CSP
+     (default-src 'self') — hence the external stylesheet and no inline style/script. The Russian
+     page is canonical; /welcome/en.html is the English mirror. All links are same-origin: the app
+     ("/"), the published legal pages (/legal/*/, same targets the auth screen links to) and the public
+     health endpoint (/health) — no external trackers, fonts or CDNs, ever. -->
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e1114" />
+    <title>Green Chat — мессенджер без номера телефона</title>
+    <meta name="description" content="Green Chat — мессенджер без обязательного номера телефона: офлайн-очередь, восстановление после обрывов, отмена действий и управляемые настройки приватности." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Green Chat" />
+    <meta property="og:title" content="Green Chat — мессенджер без номера телефона" />
+    <meta property="og:description" content="Вход без SMS, надёжная доставка после обрывов, явный выбор сервера и понятные настройки приватности." />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <link rel="alternate" hreflang="ru" href="/welcome/" />
+    <link rel="alternate" hreflang="en" href="/welcome/en.html" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/welcome/welcome.css" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="top">
+        <div class="brand">
+          <img src="/icon.svg" alt="" width="40" height="40" />
+          <span>Green Chat</span>
+        </div>
+        <nav class="lang" aria-label="Язык страницы">
+          <span aria-current="page">RU</span>
+          <a href="/welcome/en.html" lang="en" hreflang="en">EN</a>
+        </nav>
+      </header>
+
+      <section class="hero">
+        <h1>Мессенджер, которому не&nbsp;нужен ваш номер телефона</h1>
+        <p class="tagline">
+          Green Chat — быстрый и честный мессенджер: аккаунт по @имени и паролю,
+          восстановление доставки после обрывов и понятное управление приватностью.
+        </p>
+        <p class="cta">
+          <a class="btn" href="/">Открыть Green Chat</a>
+        </p>
+      </section>
+
+      <section class="features" aria-label="Чем Green Chat отличается">
+        <article>
+          <h2>Аккаунт без телефона</h2>
+          <p>Для регистрации достаточно @имени и пароля. Номер и SMS не обязательны; телефон и e-mail другим пользователям не показываются.</p>
+        </article>
+        <article>
+          <h2>Сообщения переживают обрывы</h2>
+          <p>Исходящие ждут подключения и отправляются после возврата сети, а пропущенные события восстанавливаются по серверному курсору без дублей.</p>
+        </article>
+        <article>
+          <h2>Отмена до необратимого действия</h2>
+          <p>Отправку и удаление сообщения можно отменить в течение пяти секунд, пока операция ещё находится в локальной очереди.</p>
+        </article>
+        <article>
+          <h2>Выбираете сервер до входа</h2>
+          <p>Адрес сервера задаётся явно до авторизации. Клиент отправляет прикладной трафик только на выбранный узел, а смена адреса остаётся осознанным действием пользователя.</p>
+        </article>
+        <article>
+          <h2>Приватность профиля</h2>
+          <p>Телефон и e-mail не публикуются в профиле. В приложении доступны настройки видимости, управление контактами и блокировка нежелательных пользователей.</p>
+        </article>
+      </section>
+
+      <section class="hero">
+        <p class="cta">
+          <a class="btn" href="/">Открыть Green Chat</a>
+        </p>
+      </section>
+
+      <footer class="foot">
+        <nav aria-label="Документы и статус">
+          <a href="/legal/tos/">Условия использования</a>
+          <a href="/legal/privacy/">Конфиденциальность</a>
+          <a href="/health">Статус сервера</a>
+        </nav>
+        <p class="fine">Green Chat — свободное ПО (AGPL-3.0). Ядро бесплатно и таким останется.</p>
+      </footer>
+    </main>
+  </body>
+</html>

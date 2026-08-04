@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "release_id": "green-chat-1.0.0-beta.6-android.1000027-rev.3",
+  "channel": "beta",
+  "current_version": "1.0.0-beta.6",
+  "published_at": "2026-08-04T16:43:23Z",
+  "notes": "BETA RELEASE: единая Android-сборка versionCode 1000027 из проверенного снимка 428e4be7, подписанная каноническим сертификатом GreenChat. Web/PWA и прямой APK опубликованы и проверены: APK sha256 5dca8bb19102f936328c1341a79a2f1fe25489c055a524f14561f77ee896b655, 55337158 байт. AAB sha256 71add38206a466499d7fcd1ae5dce03f987545a87ee6ba923ab87179d390becf, 28424716 байт принят Google Play, но edits.commit заблокирован обязательной декларацией Foreground Service mediaProjection; код 1000027 поэтому считается израсходованным, следующий релиз резервирует 1000028.",
+  "platforms": {
+    "web": {
+      "status": "available",
+      "url": "/?app=1#/"
+    },
+    "android": {
+      "status": "available",
+      "version_code": 1000027,
+      "min_os": "Android 7.0",
+      "min_supported": "0.0.0",
+      "artifact_filename": "GreenChat-1.0.0-beta.6-android-1000027-release.apk",
+      "size_bytes": 55337158,
+      "sha256": "5dca8bb19102f936328c1341a79a2f1fe25489c055a524f14561f77ee896b655",
+      "pending_version_code": 1000028,
+      "pending_reason": "1000027 опубликован как Web/PWA и прямой APK; AAB принят Google Play, но commit заблокирован обязательной декларацией Foreground Service mediaProjection. Следующий Android-релиз использует 1000028."
+    },
+    "ios": {
+      "status": "web",
+      "url": "/?app=1#/",
+      "native_status": "not_published"
+    },
+    "windows": {
+      "status": "available",
+      "url": "/v1/client/updates/artifact/GreenChat-1.0.0-beta.6-windows-x64-setup.exe",
+      "native_status": "available",
+      "version": "1.0.0-beta.6",
+      "arch": "x86_64",
+      "min_os": "Windows 10 1903",
+      "min_supported": "0.0.0",
+      "artifact_filename": "GreenChat-1.0.0-beta.6-windows-x64-setup.exe",
+      "size_bytes": 15244035,
+      "sha256": "704c631aaac693570d07ed149802aea9507de54db322e63f170cd9fdb00e87a6",
+      "signed": false
+    },
+    "macos": {
+      "status": "web",
+      "url": "/?app=1#/",
+      "native_status": "preparing"
+    },
+    "linux": {
+      "status": "available",
+      "arch": "x86_64",
+      "min_supported": "0.0.0",
+      "packages": {
+        "appimage": {
+          "artifact_filename": "GreenChat-1.0.0-beta.6-linux-x86_64.AppImage",
+          "size_bytes": 117766648,
+          "sha256": "cba1d65a4a6eb2c7923292616b5dda15c8a10e98fd7fd40e31a49d2dd4a46f0f",
+          "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRckVIZUxTSm8zMlNWWmc1Q25sVVBGSVBtRUdVYjVZZm5pWWZaOTB0dlFaQUlvelcrOWN4UHJ2bk9iaStBU1ZuZksyWi8zbFM4NjhkblhZc1NNUnhtUzFEZHRzc2tlbXdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1ODUxNjc2CWZpbGU6R3JlZW5DaGF0XzEuMC4wLWJldGEuNl9hbWQ2NC5BcHBJbWFnZQpwdnF0SklxaWFsNmdoVW5PSm5mM3dJRXlQdFJxcE8wZXZWdDR5UDF1SGNyWFpRdFdJSXdhZnBWVC95UUU1ZG13SjlaZmw4MHRPTFkrVmo5bURtVVREQT09Cg=="
+        },
+        "deb": {
+          "artifact_filename": "GreenChat-1.0.0-beta.6-linux-amd64.deb",
+          "size_bytes": 14825044,
+          "sha256": "30143a6507c64eeaeba2a0a788104ddb10b4cbdf3101ac83ebc3184eb47248b9",
+          "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRckVIZUxTSm8zMmFxRFI2RVc4ZU9VenRxcDN2YmRSeUtoQ21TbUhEU25KYVpROXBHMlNHNDQvNG1HTEE2VUdMQ2pwRjVrY1pKMHZ2SXJ5MG1pOVltMy96bkZyRnlmY2cwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1ODUxNjkxCWZpbGU6R3JlZW5DaGF0XzEuMC4wLWJldGEuNl9hbWQ2NC5kZWIKdzBUT1BzOUZqdkNGNmFlK3E3TExTODFTdkQzVEFZaHNmVDV0QVdoVWtSWk1rbXBScGpjR3EwZnRKRlVxTW1FeGFWVHdKY0RzT1lrZ3ZUQkJiN0lzQmc9PQo="
+        },
+        "rpm": {
+          "artifact_filename": "GreenChat-1.0.0-beta.6-linux-x86_64.rpm",
+          "size_bytes": 19981476,
+          "sha256": "58a2a252d84106162f87dc028c3122e9c5f77dec128948e5364123a6d87fd024",
+          "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRckVIZUxTSm8zMmE0L0xZMFdlZlZCTnd1MVo2dVdEZlFFSno1NkIrd2lVeXNYUmRENUczZHczYTlJdzNwYisyS2d1QnFOczhEcnk0UjZjMUp2RkZMb2lLY1VVdU4wc3dBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1ODUxNjc2CWZpbGU6R3JlZW5DaGF0LTEuMC4wLWJldGEuNi0xLng4Nl82NC5ycG0KekJsTUpETTQ5U1MxK2NMT1VLR3hKckhia0tUVkY3WStZVFlPRFd0eDVUVi9zbXFJcmpLckNqV3RMTTJDMTMyMHZ3UjhveGNpUktJUVVSeWl2bFZUREE9PQo="
+        }
+      },
+      "version": "1.0.0-beta.6"
+    }
+  },
+  "catalog_revision": 3
+}

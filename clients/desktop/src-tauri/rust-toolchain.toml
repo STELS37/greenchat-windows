@@ -1,0 +1,5 @@
+# T-411: build Green Chat desktop with the rustup `stable` toolchain, NOT the system rustc 1.75
+# (too old for Tauri 2 / current crates). rustup auto-selects this when cargo runs in this directory;
+# install once with:  rustup toolchain install stable
+[toolchain]
+channel = "stable"

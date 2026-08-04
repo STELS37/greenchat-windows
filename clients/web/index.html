@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f5f8f7" />
+    <title>Green Chat — свободное общение и контроль ваших данных</title>
+    <meta name="description" content="Green Chat — мессенджер без обязательного номера телефона: личные и групповые чаты, каналы, офлайн-очередь, локальная защита приложения и понятные настройки приватности." />
+    <meta name="application-name" content="Green Chat" />
+    <meta name="apple-mobile-web-app-title" content="Green Chat" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Green Chat" />
+    <meta property="og:title" content="Green Chat — свободное общение и контроль ваших данных" />
+    <meta property="og:description" content="Мессенджер без обязательного номера телефона: общение, офлайн-работа и управляемая приватность." />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <link rel="canonical" href="/" />
+    <link rel="alternate" hreflang="ru" href="/" />
+    <link rel="alternate" hreflang="en" href="/en/" />
+    <link rel="alternate" hreflang="x-default" href="/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/site.css?v=__SITE_VERSION__" />
+    <link rel="stylesheet" href="/update-notice.css?v=__SITE_VERSION__" />
+    <!-- __STYLES__ -->
+    <!-- __SCRIPTS__ -->
+  </head>
+  <body>
+    <div class="gc-site" data-gc-site>
+      <a class="skip-link" href="#main">Перейти к содержанию</a>
+
+      <header class="site-header">
+        <div class="shell header-inner">
+          <a class="brand" href="/" aria-label="Green Chat — главная">
+            <img src="/icon.svg" alt="" width="42" height="42" />
+            <span class="brand-copy">
+              <strong>Green Chat</strong>
+              <small>Свобода общаться</small>
+            </span>
+          </a>
+
+          <nav class="main-nav" aria-label="Основная навигация">
+            <a href="#features">Возможности</a>
+            <a href="#privacy">Приватность</a>
+            <a href="#download">Скачать</a>
+            <a href="#faq">Вопросы</a>
+          </nav>
+
+          <div class="header-actions">
+            <a class="lang-link" href="/en/" lang="en" hreflang="en">EN</a>
+            <a class="button button-small button-quiet" href="/?app=1#/">Открыть приложение</a>
+          </div>
+        </div>
+      </header>
+
+      <main id="main">
+        <section class="hero section">
+          <div class="shell hero-grid">
+            <div class="hero-copy">
+              <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Открытая бета</p>
+              <h1>Общение без лишних условий</h1>
+              <p class="hero-lead">
+                Green Chat — быстрый мессенджер с аккаунтом по @имени, надёжной работой при нестабильной сети
+                и настройками приватности, которыми управляете вы.
+              </p>
+
+              <div class="hero-actions">
+                <a
+                  class="button button-primary button-large"
+                  href="/?app=1#/"
+                  data-primary-download
+                  data-fallback-label="Открыть веб-версию"
+                >Открыть веб-версию</a>
+                <a class="button button-large button-secondary" href="#download">Все платформы</a>
+              </div>
+
+              <p class="hero-note" data-primary-note>
+                Работает прямо в браузере. Установка не обязательна.
+              </p>
+
+              <ul class="trust-list" aria-label="Ключевые свойства">
+                <li>Номер телефона не обязателен</li>
+                <li>Без рекламных трекеров</li>
+                <li>Открытый исходный код</li>
+              </ul>
+            </div>
+
+            <div class="product-stage" aria-label="Предварительный вид интерфейса Green Chat">
+              <div class="glow glow-one" aria-hidden="true"></div>
+              <div class="glow glow-two" aria-hidden="true"></div>
+              <div class="app-window">
+                <div class="window-bar">
+                  <div class="window-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+                  <span>Green Chat</span>
+                  <span class="window-lock">Защищено локальным замком</span>
+                </div>
+                <div class="app-layout">
+                  <aside class="chat-list" aria-label="Список чатов">
+                    <div class="mock-search">Поиск</div>
+                    <div class="mock-chat active">
+                      <span class="avatar avatar-green">GC</span>
+                      <span><strong>Команда Green Chat</strong><small>Всё готово к работе</small></span>
+                      <b>2</b>
+                    </div>
+                    <div class="mock-chat">
+                      <span class="avatar avatar-violet">А</span>
+                      <span><strong>Алексей</strong><small>Сообщение отправится…</small></span>
+                    </div>
+                    <div class="mock-chat">
+                      <span class="avatar avatar-blue">П</span>
+                      <span><strong>Проект</strong><small>Мария: принято</small></span>
+                    </div>
+                    <div class="mock-chat">
+                      <span class="avatar avatar-orange">К</span>
+                      <span><strong>Канал обновлений</strong><small>Версия __GC_RELEASE_VERSION__</small></span>
+                    </div>
+                  </aside>
+                  <section class="conversation" aria-label="Открытый чат">
+                    <div class="conversation-head">
+                      <span class="avatar avatar-green">GC</span>
+                      <span><strong>Команда Green Chat</strong><small>4 участника</small></span>
+                      <span class="head-actions" aria-hidden="true">•••</span>
+                    </div>
+                    <div class="messages">
+                      <div class="message incoming">
+                        <p>Добро пожаловать! Здесь можно общаться без обязательной привязки номера.</p>
+                        <time>10:41</time>
+                      </div>
+                      <div class="message outgoing">
+                        <p>А при пропадании интернета сообщение не потеряется?</p>
+                        <time>10:42 ✓✓</time>
+                      </div>
+                      <div class="message incoming">
+                        <p>Нет. Оно останется в локальной очереди и отправится после восстановления связи.</p>
+                        <time>10:42</time>
+                      </div>
+                      <div class="offline-pill"><span></span> Сеть восстановлена · синхронизация завершена</div>
+                    </div>
+                    <div class="composer"><span>Сообщение</span><b>➤</b></div>
+                  </section>
+                </div>
+              </div>
+              <div class="floating-card floating-card-top">
+                <span class="floating-icon">↺</span>
+                <span><strong>Офлайн-очередь</strong><small>Ничего не потеряется при обрыве</small></span>
+              </div>
+              <div class="floating-card floating-card-bottom">
+                <span class="floating-icon">⌁</span>
+                <span><strong>Контроль приватности</strong><small>Понятные настройки без скрытых условий</small></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="proof-strip" aria-label="Принципы Green Chat">
+          <div class="shell proof-grid">
+            <div><strong>@имя + пароль</strong><span>регистрация без обязательной SMS</span></div>
+            <div><strong>Offline-first</strong><span>очередь и восстановление после обрывов</span></div>
+            <div><strong>AGPL-3.0</strong><span>открытое ядро без рекламных SDK</span></div>
+          </div>
+        </section>
+
+        <section class="section feature-section" id="features">
+          <div class="shell">
+            <div class="section-heading centered">
+              <p class="eyebrow">Возможности</p>
+              <h2>Всё необходимое для ежедневного общения</h2>
+              <p>Без перегруженных меню: нужные действия находятся там, где вы ожидаете их увидеть.</p>
+            </div>
+
+            <div class="feature-grid">
+              <article class="feature-card feature-card-wide">
+                <span class="feature-number">01</span>
+                <div class="feature-icon" aria-hidden="true">⌁</div>
+                <h3>Личные и групповые чаты</h3>
+                <p>Диалоги, группы и каналы с историей сообщений, реакциями, ответами, редактированием и удалением.</p>
+                <div class="mini-thread" aria-hidden="true">
+                  <span></span><span></span><span></span>
+                </div>
+              </article>
+
+              <article class="feature-card">
+                <span class="feature-number">02</span>
+                <div class="feature-icon" aria-hidden="true">↺</div>
+                <h3>Работа при нестабильной сети</h3>
+                <p>Исходящие ждут подключения, а пропущенные события восстанавливаются после возвращения связи.</p>
+              </article>
+
+              <article class="feature-card">
+                <span class="feature-number">03</span>
+                <div class="feature-icon" aria-hidden="true">↶</div>
+                <h3>Отмена до отправки</h3>
+                <p>Пока операция находится в локальной очереди, отправку или удаление можно отменить.</p>
+              </article>
+
+              <article class="feature-card">
+                <span class="feature-number">04</span>
+                <div class="feature-icon" aria-hidden="true">◉</div>
+                <h3>Уведомления без лишних деталей</h3>
+                <p>Выбирайте, показывать ли текст сообщения, только имя отправителя или нейтральное уведомление.</p>
+              </article>
+
+              <article class="feature-card">
+                <span class="feature-number">05</span>
+                <div class="feature-icon" aria-hidden="true">⇩</div>
+                <h3>Экспорт и удаление аккаунта</h3>
+                <p>Данные можно выгрузить, а аккаунт — удалить через понятный управляемый процесс.</p>
+              </article>
+
+              <article class="feature-card feature-card-wide feature-card-accent">
+                <span class="feature-number">06</span>
+                <div class="feature-icon" aria-hidden="true">◎</div>
+                <h3>Выбор сервера до входа</h3>
+                <p>Адрес узла задаётся до авторизации. Клиент обращается к выбранному серверу, а смена остаётся явным действием пользователя.</p>
+                <div class="server-line" aria-hidden="true"><i></i><span>Выбранный сервер</span><b>Подключено</b></div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section privacy-section" id="privacy">
+          <div class="shell privacy-grid">
+            <div class="privacy-copy">
+              <p class="eyebrow">Приватность и защита устройства</p>
+              <h2>Не обещания, а конкретные инструменты</h2>
+              <p class="section-lead">
+                Green Chat не требует обязательного номера телефона и даёт пользователю явные средства
+                защиты локальных данных. Вы сами решаете, какие функции включать.
+              </p>
+
+              <div class="privacy-list">
+                <article>
+                  <span>01</span>
+                  <div><h3>Локальный замок приложения</h3><p>Защитите доступ кодом или парольной фразой. На поддерживаемом устройстве биометрия может использоваться как быстрый способ разблокировки.</p></div>
+                </article>
+                <article>
+                  <span>02</span>
+                  <div><h3>Шифрование локального кэша</h3><p>После включения замка локальный кэш сообщений и медиа переводится в зашифрованное хранилище устройства.</p></div>
+                </article>
+                <article>
+                  <span>03</span>
+                  <div><h3>Аварийный код</h3><p>Можно настроить отдельный код, который очищает локальные данные и сессию устройства. Серверные действия выполняются по возможности при наличии связи.</p></div>
+                </article>
+              </div>
+            </div>
+
+            <div class="security-panel">
+              <div class="security-orbit" aria-hidden="true">
+                <div class="orbit orbit-one"></div>
+                <div class="orbit orbit-two"></div>
+                <div class="shield-mark"><img src="/icon.svg" alt="" width="78" height="78" /></div>
+              </div>
+              <div class="security-card">
+                <span class="security-state"><i></i> Замок включён</span>
+                <strong>Локальные данные защищены</strong>
+                <small>Ключ остаётся на устройстве</small>
+                <div class="pin-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                <button type="button" tabindex="-1">Открыть по биометрии</button>
+              </div>
+              <p class="honesty-note">
+                Мы не используем абсолютные формулировки о безопасности и не скрываем границы защиты.
+                На странице перечислены реальные функции и их ограничения.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section download-section" id="download">
+          <div class="shell">
+            <div class="section-heading download-heading">
+              <div>
+                <p class="eyebrow">Скачать Green Chat</p>
+                <h2>Одна учётная запись на ваших устройствах</h2>
+              </div>
+              <p>
+                Текущая версия: <strong data-current-version>__GC_RELEASE_VERSION__</strong>.
+                Ниже показан реально доступный вариант для каждой платформы — без неработающих ссылок.
+              </p>
+            </div>
+
+            <div class="platform-grid">
+              <article class="platform-card platform-featured" data-platform-card="android">
+                <div class="platform-top">
+                  <span class="platform-icon">A</span>
+                  <span class="availability available"><i></i> APK доступен</span>
+                </div>
+                <h3>Android</h3>
+                <p>Подписанная нативная сборка для телефонов и планшетов __GC_RELEASE_ANDROID_MIN_OS__ и новее.</p>
+                <dl>
+                  <div><dt>Версия</dt><dd data-version="android">__GC_RELEASE_VERSION__</dd></div>
+                  <div><dt>Размер</dt><dd data-size="android">__GC_RELEASE_ANDROID_SIZE__</dd></div>
+                </dl>
+                <a class="button button-primary platform-button" data-download="android" href="__GC_RELEASE_ANDROID_URL__" download>Скачать APK</a>
+
+                <a class="platform-legal-link" href="/legal/open-source/">Лицензии и исходный код</a>
+                <small>Установка напрямую. Android может запросить разрешение на установку APK.</small>
+              </article>
+
+              <article class="platform-card" data-platform-card="ios">
+                <div class="platform-top">
+                  <span class="platform-icon">iOS</span>
+                  <span class="availability web"><i></i> PWA доступно</span>
+                </div>
+                <h3>iPhone и iPad</h3>
+                <p>Полная веб-версия работает в Safari и устанавливается на главный экран как приложение.</p>
+                <dl>
+                  <div><dt>Версия</dt><dd data-version="ios">__GC_RELEASE_VERSION__</dd></div>
+                  <div><dt>Нативная сборка</dt><dd>ещё не опубликована</dd></div>
+                </dl>
+                <a class="button button-secondary platform-button" data-download="ios" href="/?app=1#/">Открыть веб-версию</a>
+                <small>Safari → «Поделиться» → «На экран Домой».</small>
+              </article>
+
+              <!-- GC_RELEASE_WINDOWS_NATIVE_START -->
+              <article class="platform-card platform-featured" data-platform-card="windows">
+                <div class="platform-top">
+                  <span class="platform-icon">Win</span>
+                  <span class="availability available"><i></i> EXE доступен</span>
+                </div>
+                <h3>Windows</h3>
+                <p>Нативная beta-сборка x86_64 для __GC_RELEASE_WINDOWS_MIN_OS__ и более новых версий Windows.</p>
+                <dl>
+                  <div><dt>Версия</dt><dd data-version="windows">__GC_RELEASE_VERSION__</dd></div>
+                  <div><dt>Размер</dt><dd data-size="windows">__GC_RELEASE_WINDOWS_SIZE__</dd></div>
+                </dl>
+                <div class="platform-actions">
+                  <a class="button button-primary" data-download="windows" href="__GC_RELEASE_WINDOWS_URL__" download>Скачать EXE · <span data-size="windows">__GC_RELEASE_WINDOWS_SIZE__</span></a>
+                  <a class="button button-secondary" href="/?app=1#/">Открыть веб-версию</a>
+                </div>
+                <small>__GC_RELEASE_WINDOWS_SIGNATURE_NOTE__</small>
+              </article>
+              <!-- GC_RELEASE_WINDOWS_NATIVE_END -->
+              <!-- GC_RELEASE_WINDOWS_WEB_START -->
+              <article class="platform-card" data-platform-card="windows">
+                <div class="platform-top">
+                  <span class="platform-icon">Win</span>
+                  <span class="availability web"><i></i> Web / PWA</span>
+                </div>
+                <h3>Windows</h3>
+                <p>Работает в современном браузере; можно установить как отдельное PWA-окно.</p>
+                <dl>
+                  <div><dt>Версия</dt><dd data-version="windows">__GC_RELEASE_VERSION__</dd></div>
+                  <div><dt>Нативный установщик</dt><dd>готовится</dd></div>
+                </dl>
+                <a class="button button-secondary platform-button" data-download="windows" href="/?app=1#/">Открыть для Windows</a>
+                <small>В Chromium-браузере нажмите значок установки в адресной строке.</small>
+              </article>
+              <!-- GC_RELEASE_WINDOWS_WEB_END -->
+
+              <article class="platform-card" data-platform-card="macos">
+                <div class="platform-top">
+                  <span class="platform-icon">mac</span>
+                  <span class="availability web"><i></i> Web / PWA</span>
+                </div>
+                <h3>macOS</h3>
+                <p>Веб-клиент доступен сейчас. Нативный DMG будет добавлен после публикации подписанной сборки.</p>
+                <dl>
+                  <div><dt>Версия</dt><dd data-version="macos">__GC_RELEASE_VERSION__</dd></div>
+                  <div><dt>Apple Silicon / Intel</dt><dd>в подготовке</dd></div>
+                </dl>
+                <a class="button button-secondary platform-button" data-download="macos" href="/?app=1#/">Открыть для macOS</a>
+                <small>Safari поддерживает добавление сайта в Dock.</small>
+              </article>
+
+              <article class="platform-card platform-featured" data-platform-card="linux">
+                <div class="platform-top">
+                  <span class="platform-icon">Lnx</span>
+                  <span class="availability available"><i></i> AppImage / DEB / RPM</span>
+                </div>
+                <h3>Linux</h3>
+                <p>Нативная сборка x86_64 с подключением к основному серверу Green Chat. Веб/PWA-версия также доступна.</p>
+                <dl>
+                  <div><dt>Версия</dt><dd data-version="linux">__GC_RELEASE_VERSION__</dd></div>
+                  <div><dt>Архитектура</dt><dd>x86_64 / amd64</dd></div>
+                </dl>
+                <div class="platform-actions">
+                  <a class="button button-primary" data-download="linux-appimage" href="__GC_RELEASE_LINUX_APPIMAGE_URL__" download>AppImage · <span data-size="linux-appimage">__GC_RELEASE_LINUX_APPIMAGE_SIZE__</span></a>
+                  <a class="button button-secondary" data-download="linux-deb" href="__GC_RELEASE_LINUX_DEB_URL__" download>DEB · <span data-size="linux-deb">__GC_RELEASE_LINUX_DEB_SIZE__</span></a>
+                  <!-- GC_RELEASE_LINUX_RPM_START -->
+                  <a class="button button-secondary" data-download="linux-rpm" href="__GC_RELEASE_LINUX_RPM_URL__" download>RPM · <span data-size="linux-rpm">__GC_RELEASE_LINUX_RPM_SIZE__</span></a>
+                  <!-- GC_RELEASE_LINUX_RPM_END -->
+                </div>
+                <small>Для AppImage может потребоваться разрешение на запуск: <code>chmod +x GreenChat*.AppImage</code>.</small>
+              </article>
+
+              <article class="platform-card" data-platform-card="web">
+                <div class="platform-top">
+                  <span class="platform-icon">Web</span>
+                  <span class="availability available"><i></i> Доступно</span>
+                </div>
+                <h3>Веб-версия</h3>
+                <p>Ничего скачивать не нужно. Подходит также для ChromeOS и других современных устройств.</p>
+                <dl>
+                  <div><dt>Версия</dt><dd data-version="web">__GC_RELEASE_VERSION__</dd></div>
+                  <div><dt>Обновления</dt><dd>автоматически</dd></div>
+                </dl>
+                <a class="button button-primary platform-button" data-download="web" href="/?app=1#/">Запустить Green Chat</a>
+                <small>Данные приложения хранятся в защищённом хранилище браузера согласно выбранным настройкам.</small>
+              </article>
+            </div>
+
+            <details class="checksum">
+              <summary>Контрольные суммы загружаемых файлов</summary>
+              <div class="checksum-list">
+                <p><strong>Android APK</strong></p>
+                <code data-sha256="android">__GC_RELEASE_ANDROID_SHA256__</code>
+                <!-- GC_RELEASE_WINDOWS_NATIVE_START -->
+                <p><strong>Windows EXE</strong></p>
+                <code data-sha256="windows">__GC_RELEASE_WINDOWS_SHA256__</code>
+                <!-- GC_RELEASE_WINDOWS_NATIVE_END -->
+                <p><strong>Linux AppImage</strong></p>
+                <code data-sha256="linux-appimage">__GC_RELEASE_LINUX_APPIMAGE_SHA256__</code>
+                <p><strong>Linux DEB</strong></p>
+                <code data-sha256="linux-deb">__GC_RELEASE_LINUX_DEB_SHA256__</code>
+                <!-- GC_RELEASE_LINUX_RPM_START -->
+                <p><strong>Linux RPM</strong></p>
+                <code data-sha256="linux-rpm">__GC_RELEASE_LINUX_RPM_SHA256__</code>
+                <!-- GC_RELEASE_LINUX_RPM_END -->
+              </div>
+            </details>
+          </div>
+        </section>
+
+        <section class="section principles-section">
+          <div class="shell principles-grid">
+            <div class="section-heading">
+              <p class="eyebrow">Принципы продукта</p>
+              <h2>Свобода пользователя заложена в основу</h2>
+            </div>
+            <div class="principle-list">
+              <article><span>01</span><div><h3>Без принудительной привязки</h3><p>Для регистрации достаточно уникального @имени и пароля. Телефон и e-mail не публикуются в профиле.</p></div></article>
+              <article><span>02</span><div><h3>Без скрытой телеметрии</h3><p>Диагностика включается только с согласия пользователя; публичный сайт не использует внешние трекеры или рекламные SDK.</p></div></article>
+              <article><span>03</span><div><h3>Без ложных обещаний</h3><p>Статус Beta, доступность платформ и ограничения функций указаны прямо. Недоступные сборки не маскируются фиктивными кнопками.</p></div></article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section faq-section" id="faq">
+          <div class="shell faq-grid">
+            <div class="section-heading">
+              <p class="eyebrow">Частые вопросы</p>
+              <h2>Коротко о главном</h2>
+              <p>Green Chat развивается открыто. На этой странице перечислены только уже доступные возможности.</p>
+            </div>
+            <div class="faq-list">
+              <details>
+                <summary>Нужен ли номер телефона?</summary>
+                <p>Нет. Для регистрации используется уникальное @имя и пароль. Телефон и e-mail можно не указывать.</p>
+              </details>
+              <details>
+                <summary>Можно ли пользоваться без установки?</summary>
+                <p>Да. Веб-версия работает в современном браузере. На поддерживаемых устройствах её можно установить как PWA.</p>
+              </details>
+              <details>
+                <summary>Что произойдёт при потере сети?</summary>
+                <p>Незавершённые исходящие операции остаются в локальной очереди. После восстановления связи клиент продолжает отправку и синхронизирует пропущенные события.</p>
+              </details>
+              <details>
+                <summary>Есть ли нативное приложение для iPhone, Windows или macOS?</summary>
+                <p>Для Windows опубликован нативный beta-установщик x86_64. Для iPhone, iPad и macOS сейчас доступна веб/PWA-версия; актуальный статус указан в карточке каждой платформы.</p>
+              </details>
+              <details>
+                <summary>Как сообщить об ошибке?</summary>
+                <p>После входа откройте встроенную поддержку. Заявка может быть поставлена в локальную очередь и отправлена после восстановления связи.</p>
+              </details>
+              <details>
+                <summary>Где посмотреть статус сервиса и документы?</summary>
+                <p>Ссылки на условия, политику конфиденциальности и текущий статус сервера находятся внизу страницы.</p>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section class="section final-cta">
+          <div class="shell final-card">
+            <div>
+              <p class="eyebrow">Green Chat Beta</p>
+              <h2>Начните общаться прямо сейчас</h2>
+              <p>Создайте аккаунт без обязательного номера телефона и сами выберите нужные настройки приватности.</p>
+            </div>
+            <div class="final-actions">
+              <a class="button button-primary button-large" href="/?app=1#/">Открыть Green Chat</a>
+              <a class="button button-secondary button-large" href="#download">Выбрать платформу</a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="shell footer-grid">
+          <div class="footer-brand">
+            <a class="brand" href="/">
+              <img src="/icon.svg" alt="" width="38" height="38" />
+              <span class="brand-copy"><strong>Green Chat</strong><small>Свобода общаться</small></span>
+            </a>
+            <p>Открытый мессенджер с управляемой приватностью и честным статусом функций.</p>
+          </div>
+          <nav aria-label="Продукт">
+            <strong>Продукт</strong>
+            <a href="#features">Возможности</a>
+            <a href="#privacy">Приватность</a>
+            <a href="#download">Скачать</a>
+            <a href="/?app=1#/">Веб-приложение</a>
+          </nav>
+          <nav aria-label="Документы">
+            <strong>Документы</strong>
+            <a href="/legal/tos/">Условия использования</a>
+            <a href="/legal/privacy/">Конфиденциальность</a>
+            <a href="/health">Статус сервера</a>
+          </nav>
+          <nav aria-label="Язык">
+            <strong>Язык</strong>
+            <span aria-current="page">Русский</span>
+            <a href="/en/" lang="en" hreflang="en">English</a>
+          </nav>
+        </div>
+        <div class="shell footer-bottom">
+          <span>© 2026 Green Chat</span>
+          <span>Версия <b data-current-version>__GC_RELEASE_VERSION__</b> · Beta</span>
+          <span>Ядро распространяется по AGPL-3.0</span>
+        </div>
+      </footer>
+    </div>
+
+    <div id="app" aria-busy="true">
+      <!-- V80 — the first second of the product. Measured (probe var/ux-audit/tools/m_boot_v79.mjs,
+           390x844, app bundle throttled to a phone link): at t=120/350/700/1400 ms the app painted
+           bg rgb(243,247,245), visibleBoxes=1, text="" — a blank pale sheet with no mark, no name and
+           no sign of life until the bundle finished. This block is static markup inside #app, so it
+           costs zero requests, needs zero JavaScript, and app.ts's clear(host) removes it at the exact
+           moment the first real screen mounts. The mark is the shipped identity (public/icon.svg,
+           same geometry as the launcher/PWA/favicon), inlined so it is on screen with the document. -->
+      <div class="gc-boot" data-gc-boot role="status" aria-label="Green Chat запускается">
+        <svg class="gc-boot-mark" viewBox="0 0 512 512" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="gc-boot-g" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#19bd6e" />
+              <stop offset="1" stop-color="#0d9853" />
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="112" fill="url(#gc-boot-g)" />
+          <path fill="#ffffff" d="M256 120c-83 0-150 55-150 123 0 39 22 74 57 96l-16 53 59-31c15 3 32 5 50 5 83 0 150-55 150-123S339 120 256 120z" />
+          <g fill="#0d9853">
+            <circle cx="200" cy="243" r="20" />
+            <circle cx="256" cy="243" r="20" />
+            <circle cx="312" cy="243" r="20" />
+          </g>
+        </svg>
+        <p class="gc-boot-name">Green Chat</p>
+        <div class="gc-boot-bar" aria-hidden="true"><span></span></div>
+      </div>
+      <noscript>
+        Для работы приложения Green Chat требуется JavaScript. Информация о продукте и ссылки на загрузку доступны выше.
+      </noscript>
+    </div>
+  </body>
+</html>

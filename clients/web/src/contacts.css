@@ -1,0 +1,331 @@
+/* Contacts V178 — compact native-style address book.
+   Sync and invite remain first-class, but the oversized promotional hero is replaced by a calm,
+   width-safe action list. The narrowest supported mobile viewport keeps whole words and touch targets. */
+.gc-contacts-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  gap: 10px;
+  padding-block-end: 20px;
+}
+
+.gc-contacts-search {
+  flex: 0 0 auto;
+  margin-block-end: 0;
+}
+
+/* Measured 2026-08-04 on the harness that loads these very sheets (tokens + styles + redesign + this
+   file), Chromium, 15px system stack:
+
+     viewport 320 -> input 228px, placeholder «Найти контакт или человека по @имени» 322.4px  (+94.4)
+     viewport 360 -> input 268px, same string                                        322.4px  (+54.4)
+     viewport 390 -> input 298px, same string                                        322.4px  (+24.4)
+
+   i.e. the hint overflowed on every phone width this product ships to, including the 390px flagship.
+   The input inherits the CSS initial `text-overflow: clip`, so the overflow was cut MID-LETTER with no
+   ellipsis: the frame read «Найти контакт или человеı» and the one token that teaches the feature —
+   `@имя` — was never on screen.
+
+   Two independent causes, two fixes, both needed:
+   1. the string itself is shortened in contacts_copy.ts so it fits whole at 320px (210.4 <= 228);
+   2. this rule, because the font scale is user-controlled up to 1.4x (theme.ts FONT_SCALE_MAX) and a
+      typed query is unbounded — at 1.4x the shortened hint still overflows, and it must then degrade
+      to «Найти человека …» rather than to a sliced glyph. Declaring it on the input covers both the
+      placeholder and the value; no ::placeholder rule is required (verified in the same harness). */
+.gc-contacts-search .gc-chats-search-input {
+  text-overflow: ellipsis;
+}
+
+.gc-contact-growth {
+  position: relative;
+  flex: 0 0 auto;
+  margin-inline: 16px;
+  border: 1px solid var(--gc-border);
+  border-radius: var(--gc-radius);
+  background: var(--gc-card);
+  box-shadow: var(--gc-shadow-sm);
+  overflow: hidden;
+}
+
+.gc-contact-growth-head {
+  padding: 15px 16px 13px;
+  border-block-end: 1px solid var(--gc-border);
+}
+
+.gc-contact-growth-copy {
+  min-width: 0;
+}
+
+.gc-contact-growth h2 {
+  margin: 0;
+  color: var(--gc-fg);
+  font-size: 16px;
+  font-weight: var(--gc-weight-bold);
+  line-height: 1.25;
+  letter-spacing: -.012em;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.gc-contact-growth-copy > p {
+  margin: 4px 0 0;
+  color: var(--gc-fg-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+}
+
+.gc-contact-growth-actions {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.gc-contact-growth-action {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 58px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 0;
+  color: var(--gc-fg);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 120ms ease, opacity 120ms ease;
+}
+
+.gc-contact-growth-action + .gc-contact-growth-action {
+  border-block-start: 1px solid var(--gc-border);
+}
+
+.gc-contact-growth-action:hover:not(:disabled) {
+  background: var(--gc-card-hover);
+}
+
+.gc-contact-growth-action:active:not(:disabled) {
+  background: var(--gc-panel-muted);
+}
+
+.gc-contact-growth-action:disabled {
+  cursor: wait;
+  opacity: .62;
+}
+
+.gc-contact-growth-action-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  margin-inline-end: 11px;
+  border-radius: var(--gc-radius-sm);
+  color: var(--gc-accent-strong);
+  background: var(--gc-accent-soft);
+}
+
+.gc-contact-growth-action-primary .gc-contact-growth-action-icon {
+  color: var(--gc-accent-fg);
+  background: var(--gc-accent-grad);
+  box-shadow: var(--gc-accent-glow);
+}
+
+.gc-contact-growth-action-quiet .gc-contact-growth-action-icon {
+  color: var(--gc-fg-secondary);
+  background: var(--gc-panel-muted);
+}
+
+.gc-contact-growth-action-icon .gc-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.gc-contact-growth-action-copy {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gc-contact-growth-action-copy strong {
+  color: var(--gc-fg);
+  font-size: 14px;
+  font-weight: var(--gc-weight-bold);
+  line-height: 1.22;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.gc-contact-growth-action-copy small {
+  color: var(--gc-fg-muted);
+  font-size: 11.5px;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+.gc-contact-growth-chevron {
+  display: grid;
+  place-items: center;
+  flex: 0 0 16px;
+  margin-inline-start: 8px;
+  color: var(--gc-fg-muted);
+  opacity: .72;
+}
+
+.gc-contact-growth-chevron .gc-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.gc-contact-growth-privacy {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  border-block-start: 1px solid var(--gc-border);
+  color: var(--gc-fg-muted);
+  background: color-mix(in srgb, var(--gc-panel-muted) 72%, transparent);
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.gc-contact-growth-privacy .gc-icon {
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  margin-block-start: 1px;
+  color: var(--gc-accent-strong);
+}
+
+.gc-contact-growth-result {
+  margin: 10px 12px 12px;
+  padding: 10px 11px;
+  border-radius: var(--gc-radius-sm);
+  color: var(--gc-fg-secondary);
+  background: var(--gc-panel-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.gc-contact-growth-result[data-tone="ok"] {
+  color: var(--gc-success);
+  background: var(--gc-accent-soft);
+}
+
+.gc-contact-growth-result[data-tone="error"] {
+  color: var(--gc-danger);
+  background: var(--gc-danger-soft);
+}
+
+.gc-contacts-host {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.gc-contacts-section,
+.gc-contacts-found {
+  margin-block: 0;
+}
+
+.gc-contacts-empty-compact {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 2px 11px;
+  align-items: center;
+  padding: 14px;
+  border: 1px dashed var(--gc-border-strong);
+  border-radius: var(--gc-radius);
+  background: color-mix(in srgb, var(--gc-panel-muted) 78%, transparent);
+}
+
+.gc-contacts-empty-icon {
+  display: grid;
+  grid-row: 1 / span 2;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--gc-radius-sm);
+  color: var(--gc-accent-strong);
+  background: var(--gc-accent-soft);
+}
+
+.gc-contacts-empty-icon .gc-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.gc-contacts-empty-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gc-contacts-empty-copy strong {
+  color: var(--gc-fg);
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.gc-contacts-empty-copy span {
+  color: var(--gc-fg-muted);
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.gc-contacts-empty-search {
+  grid-column: 2;
+  justify-self: start;
+  margin-block-start: 7px;
+  padding: 0;
+  border: 0;
+  color: var(--gc-accent-strong);
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: var(--gc-weight-bold);
+  cursor: pointer;
+}
+
+@media (max-width: 350px) {
+  .gc-contact-growth {
+    margin-inline: 10px;
+    border-radius: var(--gc-radius);
+  }
+
+  .gc-contact-growth-head {
+    padding-inline: 14px;
+  }
+
+  .gc-contact-growth-action {
+    padding-inline: 12px;
+  }
+}
+
+@media (min-width: 700px) {
+  .gc-contact-growth-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .gc-contact-growth-action + .gc-contact-growth-action {
+    border-block-start: 0;
+    border-inline-start: 1px solid var(--gc-border);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gc-contact-growth-action {
+    transition: none;
+  }
+}

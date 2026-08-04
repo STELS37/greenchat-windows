@@ -1,0 +1,16 @@
+node_modules/
+clients/web/dist/
+clients/desktop/src-tauri/target/
+clients/desktop/src-tauri/resources/tdlib/*.dll
+clients/desktop/src-tauri/resources/tdlib/*.so
+clients/desktop/src-tauri/resources/tdlib/*.dylib
+var/
+dist/
+artifacts/
+*.pfx
+*.p12
+*.key
+*.pem
+.env
+.env.*
+!.env.example

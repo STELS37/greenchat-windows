@@ -1,0 +1,26 @@
+{
+  "id": "/?app=1#/",
+  "name": "Green Chat",
+  "short_name": "Green Chat",
+  "description": "Мессенджер Green Chat — быстрый, приватный, без рекламы.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "/?app=1#/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "theme_color": "#059669",
+  "background_color": "#f2f6f5",
+  "categories": ["social", "communication"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "/?app=1",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  }
+}

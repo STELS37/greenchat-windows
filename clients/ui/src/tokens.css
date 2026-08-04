@@ -1,0 +1,388 @@
+/* GreenChat V4 design tokens — one production visual system for Web/PWA, Tauri and Capacitor.
+   ThemeController sets data-theme/data-density and --gc-font-scale on <html>.
+   Components consume semantic --gc-* values only; page-local colours are prohibited. */
+
+:root {
+  color-scheme: light;
+
+  /* Brand */
+  --gc-brand-50: #ecfff4;
+  --gc-brand-100: #d4fbe3;
+  --gc-brand-200: #aaf5ca;
+  --gc-brand-300: #72eba9;
+  --gc-brand-400: #3bdc88;
+  --gc-brand-500: #22c970;
+  --gc-brand-600: #13aa5b;
+  --gc-brand-700: #0d8749;
+  --gc-brand-800: #0d6a3e;
+  --gc-brand-900: #0a5734;
+  --gc-cyan-500: #16b8c4;
+  --gc-violet-500: #7769ef;
+  --gc-gold-500: #f4b63e;
+
+  /* Actions and statuses */
+  --gc-accent: var(--gc-brand-600);
+  /* Text-weight accent. brand-700 (#0d8749) measured 4.24:1 on the app background and 4.48:1 on the
+     navigation bar — under AA 4.5 for the "create account" link and the active tab label, i.e. the two
+     places the accent is used as *text*. This tone measures 4.8:1 there and 5.2:1 on white cards. */
+  --gc-accent-strong: #0b7d43;
+  --gc-accent-hover: #0e984f;
+  /* White text sits on this gradient in 24 places (primary buttons, unread badges, FAB, voice
+     play). The old stops measured 1.80/2.57/4.14 against white — the "Сохранить" button and the
+     unread counter failed AA outright. Every stop now measures >= 4.5 while keeping a visible
+     light-to-deep sweep, so the control still reads as a gradient and not as flat paint.
+     Reference points: Telegram 3.31, WhatsApp 3.03, iOS system green 4.40. */
+  --gc-accent-grad: linear-gradient(135deg, #17874d 0%, #0f7a46 48%, #0a6a3d 100%);
+  --gc-accent-soft: #def8ea;
+  --gc-accent-soft-fg: #076b3b;
+  --gc-accent-fg: #ffffff;
+  /* #dc3655 measured 4.47:1 on the white menu plate — a rounding hair under the 4.5:1 WCAG 1.4.3
+     floor, and this is the ink on "Удалить", the one item that must never be misread. #d02a49 is
+     the same hue at 5.11:1, and it also carries white ink at 5.11:1 on destructive buttons. */
+  --gc-danger: #d02a49;
+  --gc-danger-soft: #fff0f3;
+  --gc-warning: #ad741b;
+  --gc-warning-soft: #fff5df;
+  --gc-success: #078951;
+  --gc-online: #20c776;
+
+  /* Surfaces */
+  --gc-bg: #f3f7f5;
+  --gc-bg-subtle: #eaf1ee;
+  --gc-bg-elevated: #ffffff;
+  --gc-panel: rgba(255, 255, 255, 0.9);
+  --gc-panel-solid: #ffffff;
+  --gc-panel-muted: #f5f9f7;
+  --gc-card: #ffffff;
+  --gc-card-hover: #f0f7f3;
+  /* Measured (route audit v15, probe_dark.mjs): the search pill painted #f4f8f6 on a #f3f7f5 page —
+     a one-step delta, i.e. an input field that is invisible until it is focused. Input surfaces now
+     sit a real step away from BOTH the page and the elevated card they may be placed on. */
+  --gc-input-bg: #e9f1ec;
+  --gc-nav-bg: rgba(250, 253, 251, 0.92);
+  --gc-glass: rgba(255, 255, 255, 0.82);
+  --gc-fg: #0c1d17;
+  --gc-fg-secondary: #3a5047;
+  /* Measured against the real surfaces (#fff cards, #f3f7f5 panels): the previous muted/faint pair
+     scored 4.34 and 2.73 against a 4.5 requirement, which is why timestamps and field hints read as
+     washed out. These values clear 4.5 on both surfaces while keeping the secondary→muted→faint
+     hierarchy intact. */
+  --gc-fg-muted: #4f6259;
+  --gc-fg-faint: #63756c;
+  --gc-border: #d9e5df;
+  --gc-border-strong: #bdcfc6;
+  --gc-hover: #edf5f1;
+  --gc-active: #def4e8;
+  --gc-veil: rgba(244, 248, 246, 0.9);
+  --gc-scrim: rgba(2, 12, 8, 0.58);
+
+  /* Messaging */
+  --gc-bubble-in: #ffffff;
+  /* Light theme puts dark text on a pale green bubble, the way every readable messenger does. The
+     previous saturated green with white text measured 2.78:1 for body text and 1.42:1 for the
+     timestamp against a 4.5:1 requirement — own messages were the least readable text in the app. */
+  /* Measured (probe v7, ΔE2000 + WCAG luminance against the wallpaper): with the old #edf4f0 wallpaper
+     an INCOMING white bubble scored ΔE00 4.96 — below the ~5 threshold at which two colours read as the
+     same one at a glance — and the light stop of the own bubble measured 1.002:1, i.e. its top edge was
+     physically indistinguishable from the canvas. A speech bubble that does not separate from the
+     wallpaper is the single most "unfinished" thing a messenger can look like. Darkening the wallpaper
+     one real step (and saturating the own bubble) lifts white to ΔE00 9.22 / 1.317:1 and the own bubble
+     to ΔE00 12.80–16.33 while KEEPING the readable dark-ink-on-pale-green scheme: body ink measures
+     13.34:1 / 12.16:1 and the timestamp 5.30:1 / 4.84:1 across the two stops (floor 4.5). */
+  /* V11 re-tune. The v7 pass bought separation with mud: the canvas landed at CIE L* 89.9 with a
+     grey-green cast and the own bubble at hue 103 (yellow-green), which is why the conversation read as
+     a highlighter on cardboard. Re-solved in OkLCh under FOUR simultaneous gates instead of one, so the
+     numbers below are a search result, not a taste call:
+       g1 ΔE00(white incoming, canvas) >= 9      — a white bubble must be a distinct surface;
+       g2 luminance(white incoming, canvas) >= 1.22:1 — a pale canvas cannot game ΔE with hue alone;
+       g3 ΔE00(each own stop, canvas) >= 9 and ΔE00(each own stop, white) >= 9 — "who spoke" is never
+          a guess, neither against the canvas nor against the other speaker's bubble;
+       g4 contrast(own ink | own meta, each own stop) >= 4.5:1 — WCAG 1.4.3.
+     Result: canvas L* 92.5 (2.6 L* lighter and cooler than the shipped mud), own bubble hue 145 (a true
+     mint instead of lime). Measured: white ΔE00 9.73 / 1.237:1; own stops ΔE00 11.00 / 13.95 from the
+     canvas and 17.27 / 20.47 from white; ink 13.68:1 / 12.75:1; timestamp 5.67:1 / 5.28:1. */
+  --gc-bubble-own: linear-gradient(160deg, #dafddd 0%, #c8f8ce 100%);
+  --gc-bubble-own-fg: #0d2c1c;
+  --gc-bubble-own-meta: #3c6a4f;
+  --gc-bubble-own-overlay: rgba(11, 56, 32, 0.12);
+  /* The flat colour of a bubble's BOTTOM edge. A speech tail is drawn as a separate shape next to the
+     bubble, so it cannot inherit the bubble's gradient — it has to be painted with the exact colour the
+     gradient has reached at the point where the two meet, otherwise the tail reads as a seam. */
+  --gc-bubble-in-edge: #ffffff;
+  --gc-bubble-own-edge: #c8f8ce;
+  /* --gc-wallpaper-bg is the LIGHTEST point of the canvas, i.e. the worst case for every separation
+     gate above, which is why the arithmetic in the tests reads this token and not the deep stop. The
+     canvas itself is painted as a soft vertical fall from this colour to --gc-wallpaper-deep (3.5 L*):
+     a flat fill is the one thing that makes a large surface look like a 2005 desktop window. */
+  --gc-wallpaper-bg: #d9ebe6;
+  --gc-wallpaper-deep: #cbe1da;
+  --gc-wallpaper-dot: rgba(10, 120, 78, 0.07);
+
+  /* Geometry */
+  /* Radius ramp. Six steps plus the pill, and nothing between them. Measured on
+     the running client (2026-07-30) the shell used 26 distinct radii between 2px
+     and 30px — 14px next to 15px next to 16px next to 17px on adjacent surfaces —
+     which is the single loudest "assembled by different people" signal left.
+     Every stray value is snapped to the nearest step here; a bubble tail is the
+     only place allowed to mix two steps in one declaration. */
+  --gc-radius-2xs: 4px;
+  --gc-radius-xs: 8px;
+  --gc-radius-sm: 12px;
+  --gc-radius: 17px;
+  --gc-radius-lg: 24px;
+  --gc-radius-xl: 32px;
+  --gc-radius-pill: 999px;
+
+  /* Weight ramp. Same defect, same cure: 18 distinct numeric weights (400, 500,
+     550, 560, 600, 620, 650, 680, 700, 720, 750, 760, 780, 800, 820, 840, 850,
+     860) collapsed to five roles. Body is regular, a secondary label is medium,
+     a title is semibold, an emphasis is bold, and a display heading or avatar
+     monogram is heavy. Nothing else. */
+  --gc-weight-regular: 400;
+  --gc-weight-medium: 500;
+  --gc-weight-semibold: 600;
+  --gc-weight-bold: 700;
+  --gc-weight-heavy: 800;
+  --gc-control-height: 46px;
+  --gc-touch-target: 44px;
+
+  /* Elevation */
+  --gc-shadow-xs: 0 1px 2px rgba(5, 27, 18, 0.05);
+  --gc-shadow-sm: 0 4px 14px rgba(5, 27, 18, 0.06), 0 18px 38px rgba(5, 27, 18, 0.045);
+  --gc-shadow: 0 18px 54px rgba(5, 27, 18, 0.13), 0 2px 8px rgba(5, 27, 18, 0.05);
+  --gc-shadow-lg: 0 32px 96px rgba(5, 27, 18, 0.2);
+  --gc-accent-glow: 0 16px 42px rgba(22, 185, 101, 0.27);
+  --gc-focus-ring: 0 0 0 4px rgba(34, 201, 112, 0.2);
+
+  /* Android 15/16 edge-to-edge safe-area fallbacks are populated by SystemChrome. */
+  --gc-native-safe-top: 0px;
+  --gc-native-safe-bottom: 0px;
+  --gc-native-safe-left: 0px;
+  --gc-native-safe-right: 0px;
+  --gc-safe-top: max(env(safe-area-inset-top, 0px), var(--gc-native-safe-top));
+  --gc-safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--gc-native-safe-bottom));
+  --gc-safe-left: max(env(safe-area-inset-left, 0px), var(--gc-native-safe-left));
+  --gc-safe-right: max(env(safe-area-inset-right, 0px), var(--gc-native-safe-right));
+
+  /* Layout */
+  /* The height of a screen's top bar. One number for every screen, because a bar is a bar: its
+     height must not depend on whether that particular screen happens to draw a 44px back button.
+     Reference: Telegram for Android returns dp(56) from a single static
+     ActionBar.getCurrentActionBarHeight() (dp(48) in landscape) that every fragment shares. */
+  --gc-bar-h: 56px;
+  /* The bottom navigation's active indicator. One pill, the same box in both states, and every
+     other number in the bar is derived from its height so the bar cannot drift apart again.
+     Reference: Material 3 navigation bar (material-components-android) —
+     m3_bottom_nav_item_active_indicator_width 64dp / _height 32dp (so width = 2x height),
+     design_bottom_navigation_icon_size and mtrl_navigation_item_icon_size 24dp (= 0.75x height),
+     design_bottom_navigation_text_size 12sp, and a 4dp gap to the label
+     (m3_navigation_item_active_indicator_label_padding). */
+  --gc-nav-pill-h: 32px;
+  --gc-rail-width: 106px;
+  --gc-list-width: clamp(330px, 27vw, 410px);
+  --gc-shell-gap: 12px;
+  --gc-density-row: 60px;
+  --gc-gap: 12px;
+  --gc-pad: 16px;
+
+  /* A person's avatar disc, one number for the whole product (V66). The chat list resolved it to
+     54px, the forward/palette sheets restated the same 54px by hand, and the calls list drew the
+     same people at 48px because a generic `.gc-superapp .gc-avatar` rule happened to win there.
+     Reference (Telegram for Android): DialogCell dp(52), ProfileSearchCell dp(46) / dp(44) in
+     callCellStyle — the reference varies the disc with the row's DENSITY, never by accident. Rows of
+     the same height therefore take the same disc, and this token is where that height's disc lives. */
+  --gc-person-disc: 54px;
+
+  /* Typography */
+  --gc-font-scale: 1;
+  --gc-font-size: calc(15px * var(--gc-font-scale));
+  --gc-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --gc-font: var(--gc-font-size) / 1.48 var(--gc-font-family);
+  --gc-font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Type ramp (V10). Before this the sheets carried 90 hand-picked `rem` multipliers — 0.68, 0.7, 0.72,
+     0.78, 0.82, 0.86, 0.9, 0.93, 0.94, 0.95, 0.97, 1.02, 1.04, 1.15 … — i.e. 22 distinct sizes with no
+     rhythm, resolving to fractional pixels (measured on the running client: a chat-list title at
+     16.32px, its preview at 13.44px, a timestamp at 10.88px). Fractional type is snapped by the
+     rasteriser on a 1× display, which is exactly why the text read as slightly soft and unaligned.
+     These steps are whole pixels at the default scale and stay proportional when the user enlarges
+     text, so a screen picks a STEP instead of inventing a number. */
+  --gc-fs-11: calc(11px * var(--gc-font-scale));
+  --gc-fs-12: calc(12px * var(--gc-font-scale));
+  --gc-fs-13: calc(13px * var(--gc-font-scale));
+  --gc-fs-14: calc(14px * var(--gc-font-scale));
+  --gc-fs-15: calc(15px * var(--gc-font-scale));
+  --gc-fs-16: calc(16px * var(--gc-font-scale));
+  --gc-fs-17: calc(17px * var(--gc-font-scale));
+  --gc-fs-20: calc(20px * var(--gc-font-scale));
+  --gc-fs-24: calc(24px * var(--gc-font-scale));
+  --gc-fs-28: calc(28px * var(--gc-font-scale));
+  --gc-fs-34: calc(34px * var(--gc-font-scale));
+
+  /* Motion */
+  --gc-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+  --gc-fast: 120ms;
+  --gc-medium: 220ms;
+  --gc-slow: 420ms;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --gc-bg: #050908;
+  --gc-bg-subtle: #07100d;
+  --gc-bg-elevated: #0b1411;
+  --gc-panel: rgba(10, 19, 16, 0.9);
+  --gc-panel-solid: #0b1411;
+  --gc-panel-muted: #0e1a16;
+  --gc-card: #0d1814;
+  --gc-card-hover: #12231d;
+  /* Dark was the worse of the two: #0b1512 against the #0b1411 elevated header is a 1-3 step delta,
+     so the chat search box had no visible surface at all (v15 dark screenshot). Lifted above the card
+     tone, the way every dark-theme messenger renders a field. */
+  --gc-input-bg: #18251f;
+  --gc-nav-bg: rgba(6, 12, 10, 0.94);
+  --gc-glass: rgba(8, 16, 13, 0.84);
+  --gc-fg: #f2faf6;
+  --gc-fg-secondary: #c0d0c8;
+  --gc-fg-muted: #8ca198;
+  /* Measured on the dark surfaces (#050908 page, #0b1411 cards): the previous faint tone scored
+     3.84–4.10 against a 4.5 requirement, so message timestamps and field hints were unreadable
+     exactly where dark mode is used most — at night. This tone clears 4.5 on both surfaces and
+     still sits visibly below --gc-fg-muted, keeping the secondary→muted→faint hierarchy. */
+  --gc-fg-faint: #6e857b;
+  --gc-border: #1b2b25;
+  --gc-border-strong: #2d463c;
+  --gc-hover: #10211a;
+  --gc-active: #123323;
+  --gc-veil: rgba(5, 10, 8, 0.9);
+  --gc-scrim: rgba(0, 3, 2, 0.78);
+  --gc-accent: #2ed879;
+  --gc-accent-strong: #65eba5;
+  --gc-accent-hover: #3fe68a;
+  --gc-accent-grad: linear-gradient(135deg, #10874b 0%, #0d7a44 50%, #0a6b3c 100%);
+  --gc-accent-soft: rgba(46, 216, 121, 0.14);
+  --gc-accent-soft-fg: #74efae;
+  --gc-danger: #ff657d;
+  --gc-danger-soft: rgba(255, 101, 125, 0.14);
+  --gc-warning: #f4ba5b;
+  --gc-warning-soft: rgba(244, 186, 91, 0.13);
+  --gc-success: #71ecad;
+  --gc-online: #35e88b;
+  /* Same measurement on the dark theme: #111b18 on the #050908 wallpaper scored ΔE00 6.46 / 1.138:1 —
+     an incoming bubble that barely existed. #1d2b27 measures ΔE00 11.07 / 1.360:1 and still carries the
+     body ink at 13.09:1. */
+  /* V11: the dark canvas was #050908 — 1.4 % luminance, i.e. effectively pure black, which is what made
+     the dark theme read as a terminal rather than as a product. Lifting the canvas to #0b1512 costs the
+     incoming bubble its separation (ΔE00 falls 11.07 -> 7.18), so BOTH move together: incoming #233330
+     on canvas #0b1512 measures ΔE00 9.60, and the own-bubble stops stay 30+ away. */
+  --gc-bubble-in: #233330;
+  --gc-bubble-own: linear-gradient(145deg, #16784a 0%, #105e3a 100%);
+  --gc-bubble-own-fg: #f5fff9;
+  /* 0.85 alpha measured 4.37:1 against the lighter gradient stop — just under the 4.5:1 WCAG 1.4.3
+     floor for the timestamp. 0.92 keeps the meta visibly quieter than the body ink while measuring
+     4.83:1 / 6.76:1 across the two stops. */
+  --gc-bubble-own-meta: rgba(245, 255, 249, 0.92);
+  --gc-bubble-own-overlay: rgba(255, 255, 255, 0.22);
+  --gc-bubble-in-edge: #233330;
+  --gc-bubble-own-edge: #105e3a;
+  --gc-wallpaper-bg: #0b1512;
+  --gc-wallpaper-deep: #060d0b;
+  --gc-wallpaper-dot: rgba(70, 226, 145, 0.04);
+  --gc-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --gc-shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --gc-shadow: 0 24px 70px rgba(0, 0, 0, 0.46);
+  --gc-shadow-lg: 0 38px 120px rgba(0, 0, 0, 0.68);
+  --gc-accent-glow: 0 18px 52px rgba(30, 209, 113, 0.2);
+  --gc-focus-ring: 0 0 0 4px rgba(46, 216, 121, 0.2);
+}
+
+:root[data-density="compact"] {
+  --gc-density-row: 48px;
+  --gc-gap: 8px;
+  --gc-pad: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+.gc-sr-only,
+.gc-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+
+/* V183 — real profile/chat photos with deterministic initials as the zero-network fallback. */
+.gc-avatar {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.gc-avatar-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+  background: var(--gc-panel-muted);
+}
+.gc-avatar-editor {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--gc-radius-pill);
+  background: transparent;
+  cursor: pointer;
+}
+.gc-avatar-editor:focus-visible { box-shadow: var(--gc-focus-ring); }
+.gc-avatar-editor-badge {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--gc-panel-solid);
+  border-radius: var(--gc-radius-pill);
+  background: var(--gc-accent-grad);
+  color: var(--gc-accent-fg);
+  box-shadow: var(--gc-shadow-xs);
+}
+.gc-avatar-editor-badge .gc-icon { width: 16px; height: 16px; }
+.gc-profile-avatar-control { position: relative; flex: 0 0 auto; }
+.gc-info-photo-actions { display: flex; justify-content: center; margin-top: 10px; }
+.gc-info-requests { display: grid; gap: 10px; margin-top: 18px; }
+.gc-info-request-list { display: grid; gap: 8px; }
+.gc-info-request {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--gc-touch-target);
+  padding: 8px;
+  border: 1px solid var(--gc-border);
+  border-radius: var(--gc-radius-sm);
+  background: var(--gc-panel-muted);
+}
+.gc-info-request-actions { display: flex; gap: 6px; }
+.gc-info-request-actions .gc-btn { min-height: 38px; padding-inline: 10px; }
