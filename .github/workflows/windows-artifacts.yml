@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22.22.0'
           cache: npm
@@ -99,7 +99,7 @@ jobs:
           if (git status --porcelain) { throw 'checkout is dirty before build' }
           if ($env:GC_SERVER -notmatch '^https://') { throw 'GC_SERVER must use HTTPS' }
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22.22.0'
           cache: npm
