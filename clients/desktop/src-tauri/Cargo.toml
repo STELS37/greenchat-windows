@@ -43,7 +43,7 @@ zeroize = "1"
 url = "2"
 # T-452: load the official tdjson runtime from the packaged resource or GC_TDLIB_PATH without
 # statically linking a platform-specific binary into the shared Rust source tree.
-libloading = "0.8"
+libloading = "0.9"
 # Process-local capability leases for connector vault ownership.
 getrandom = "0.2"
 
