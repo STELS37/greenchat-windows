@@ -187,6 +187,18 @@ jobs:
           "candidate=$candidate" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
+      - name: Scan unsigned application with Microsoft Defender
+        id: defender-app
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $evidence = Join-Path $env:RUNNER_TEMP 'greenchat-defender-evidence\unsigned-app-${{ matrix.arch }}.json'
+          & scripts/windows-defender-scan.ps1 `
+            -Path '${{ steps.build-app.outputs.candidate }}' `
+            -EvidencePath $evidence
+          if ($LASTEXITCODE -ne 0) { throw "Microsoft Defender app scan failed with exit code $LASTEXITCODE" }
+          "evidence=$evidence" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
       - name: Upload unsigned app for SignPath origin verification
         id: upload-app-artifact
         uses: actions/upload-artifact@v7
@@ -269,6 +281,18 @@ jobs:
           "build_output=$out" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "payload=$payload" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
+      - name: Scan unsigned installers with Microsoft Defender
+        id: defender-installers
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $evidence = Join-Path $env:RUNNER_TEMP 'greenchat-defender-evidence\unsigned-installers-${{ matrix.arch }}.json'
+          & scripts/windows-defender-scan.ps1 `
+            -Path '${{ steps.build-installers.outputs.payload }}' `
+            -EvidencePath $evidence
+          if ($LASTEXITCODE -ne 0) { throw "Microsoft Defender installer scan failed with exit code $LASTEXITCODE" }
+          "evidence=$evidence" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
       - name: Upload unsigned installers for SignPath origin verification
         id: upload-installer-artifact
         uses: actions/upload-artifact@v7
@@ -330,6 +354,18 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Signed release finalization failed with exit code $LASTEXITCODE" }
           "release=$out" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
+
+      - name: Scan verified signed release with Microsoft Defender
+        if: vars.SIGNPATH_ENABLED == '1'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $evidence = Join-Path $env:RUNNER_TEMP 'greenchat-defender-evidence\signed-release-${{ matrix.arch }}.json'
+          & scripts/windows-defender-scan.ps1 `
+            -Path '${{ steps.finalize.outputs.release }}' `
+            -EvidencePath $evidence
+          if ($LASTEXITCODE -ne 0) { throw "Microsoft Defender signed release scan failed with exit code $LASTEXITCODE" }
+
       - name: Upload verified signed release candidate
         if: vars.SIGNPATH_ENABLED == '1'
         uses: actions/upload-artifact@v7
@@ -337,6 +373,16 @@ jobs:
           name: GreenChat-${{ matrix.id }}-signed-${{ github.sha }}
           path: ${{ steps.finalize.outputs.release }}
           if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Upload Microsoft Defender scan evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: GreenChat-${{ matrix.id }}-defender-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}\greenchat-defender-evidence
+          if-no-files-found: warn
           retention-days: 30
           compression-level: 0
 

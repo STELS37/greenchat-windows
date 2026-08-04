@@ -143,6 +143,16 @@ test("checked-in Windows release contract requires installers, TDLib, updater an
   assert.equal(windows.bundle.windows.allowDowngrades, false);
   assert.equal(windows.bundle.windows.nsis.installMode, "currentUser");
   assert.equal(windows.plugins.updater.windows.installMode, "passive");
+  const workflow = source(".github/workflows/windows-artifacts.yml");
+  const defender = source("scripts/windows-defender-scan.ps1");
+  assert.match(workflow, /Scan unsigned application with Microsoft Defender/);
+  assert.match(workflow, /Scan unsigned installers with Microsoft Defender/);
+  assert.match(workflow, /Scan verified signed release with Microsoft Defender/);
+  assert.match(workflow, /Upload Microsoft Defender scan evidence/);
+  assert.match(defender, /MpCmdRun\.exe/);
+  assert.match(defender, /-ScanType 3 -File \$resolved -DisableRemediation/);
+  assert.match(defender, /scan_exit_code = \$scanExitCode/);
+  assert.match(defender, /if \(\$scanExitCode -ne 0\)/);
   assert.match(JSON.stringify(windows), new RegExp(CANONICAL_SERVER_ORIGIN.replaceAll(".", "\\.")));
 });
 
