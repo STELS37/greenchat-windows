@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Green Chat">
+  <rect width="512" height="512" fill="#0fa15c"/>
+  <path fill="#ffffff" d="M256 156c-66 0-120 44-120 98 0 31 18 59 46 77l-13 42 47-25c12 3 26 4 40 4 66 0 120-44 120-98s-54-98-120-98z"/>
+  <g fill="#0fa15c">
+    <circle cx="211" cy="254" r="16"/>
+    <circle cx="256" cy="254" r="16"/>
+    <circle cx="301" cy="254" r="16"/>
+  </g>
+</svg>

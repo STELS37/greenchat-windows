@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schemas.tauri.app/config/2",
+  "productName": "GreenChat",
+  "identifier": "app.greenchat.desktop",
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://greenchat.globalsystem.cc/v1/client/updates/{{target}}/{{arch}}?version={{current_version}}&bundle_type={{bundle_type}}"
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "appimage",
+      "deb",
+      "rpm"
+    ],
+    "createUpdaterArtifacts": true
+  }
+}

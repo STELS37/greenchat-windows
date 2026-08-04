@@ -1,0 +1,78 @@
+/* clients/web/src/composer_expanded.css — V193 long-message composer geometry.
+ *
+ * Compact messages keep one 44dp row. Once composer.ts detects wrapping, the text stops sharing its
+ * writing rail with emoji/stickers/attachments: it receives the complete pill width, while those
+ * secondary actions sit in a stable 44dp bottom toolbar. This preserves the familiar controls without
+ * turning Russian text into the narrow vertical column reported on Android. shortscreen.css loads after
+ * this file and remains authoritative when the keyboard leaves an exceptionally short viewport. */
+
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-composer-inputwrap.is-expanded {
+  display: block;
+  min-width: 0;
+  min-height: calc(var(--gc-touch-target) * 2);
+}
+
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-composer-inputwrap.is-expanded .gc-composer-input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: calc(var(--gc-touch-target) * 2);
+  max-height: min(calc(var(--gc-touch-target) * 4), 38dvh);
+  padding: 10px 12px calc(var(--gc-touch-target) + 6px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overflow-wrap: break-word;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--gc-fg-muted) 42%, transparent) transparent;
+}
+
+/* The toolbar is over the textarea's reserved bottom padding, so expanding does not add a second
+ * 44dp row on top of the text height. The send/mic action remains outside the pill and bottom-aligned. */
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-composer-inputwrap.is-expanded .gc-composer-emoji,
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-composer-inputwrap.is-expanded .gc-composer-attach {
+  position: absolute;
+  bottom: 2px;
+  z-index: 1;
+}
+
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-composer-inputwrap.is-expanded .gc-composer-emoji:not(.gc-composer-sticker) {
+  left: 2px;
+}
+
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-composer-inputwrap.is-expanded .gc-composer-sticker {
+  left: calc(2px + var(--gc-touch-target));
+}
+
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-composer-inputwrap.is-expanded .gc-composer-attach {
+  right: 2px;
+}
+
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-composer-inputwrap.is-expanded .gc-composer-input::-webkit-scrollbar {
+  width: 3px;
+}
+
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-composer-inputwrap.is-expanded .gc-composer-input::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-composer-inputwrap.is-expanded .gc-composer-input::-webkit-scrollbar-thumb {
+  border-radius: var(--gc-radius-pill);
+  background: color-mix(in srgb, var(--gc-fg-muted) 42%, transparent);
+}
+
+@media (max-width: 360px) {
+  :is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+    .gc-composer-inputwrap.is-expanded .gc-composer-input {
+    max-height: min(calc(var(--gc-touch-target) * 3.5), 36dvh);
+  }
+}

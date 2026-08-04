@@ -1,0 +1,48 @@
+/* clients/web/src/message_delivery.css — delivery-state geometry invariants (V187).
+ *
+ * A newly sent text row is rendered optimistically before the server returns its message timestamp.
+ * The authoritative row later carries "time + check" and already reserves that metadata with the
+ * hidden .gc-bubble-metaspace copy. The pending row used to reserve only its clock icon, so its last
+ * line was narrower for one frame and then reflowed when the server echo replaced it. On Android this
+ * looked like the text was squeezed together and immediately unfolded.
+ *
+ * Reserve the authoritative metadata footprint in the pending body's inline flow from frame one.
+ * The pseudo-element is paint-free and scales with the same typography tokens as the real metadata.
+ * main.ts keeps <html lang> in sync with i18n, so the reservation matches the two shipped clock forms.
+ */
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-bubble-row[data-cmid] .gc-bubble-body::after {
+  content: "00:00 ✓✓";
+  display: inline-block;
+  visibility: hidden;
+  padding-inline-start: 8px;
+  white-space: pre;
+  font-size: var(--gc-fs-12);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* en-US Intl.DateTimeFormat emits a 12-hour label (for example "01:29 PM"). */
+:root:lang(en) :is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-bubble-row[data-cmid] .gc-bubble-body::after {
+  content: "00:00 PM ✓✓";
+}
+
+
+/* V193: two compact checks are one receipt glyph, not two flex items. Tight tracking keeps the pair
+ * within the reserved metadata box; the read state uses the accessible strong accent while ordinary
+ * delivery keeps the existing calm metadata colour. */
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-bubble-tick:is(.tick-delivered, .tick-read) {
+  letter-spacing: -0.22em;
+  padding-inline-end: 0.22em;
+  white-space: nowrap;
+}
+
+:is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer)
+  .gc-bubble.is-mine .gc-bubble-tick.tick-read {
+  color: var(--gc-accent-strong);
+  font-weight: var(--gc-weight-semibold);
+}

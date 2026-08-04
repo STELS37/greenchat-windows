@@ -1,0 +1,63 @@
+# T-411: Green Chat desktop shell (Tauri 2). A thin Rust host around the SHARED web bundle
+# (clients/web/dist) — no frontend fork. Built on this server with the rustup `stable` toolchain
+# (NOT the system rustc 1.75). See README.md for the toolchain + build notes.
+[package]
+name = "green-chat-desktop"
+version = "1.0.0-beta.6"
+description = "Green Chat desktop client"
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "green_chat_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# tray-icon: the persistent tray entry + unread badge. image-png: decode the bundled tray PNG.
+tauri = { version = "2", features = ["tray-icon", "image-png", "macos-proxy"] }
+# single-instance with deep-link integration forwards a second launch's argv (Linux deep links) to the
+# running instance instead of spawning a duplicate window.
+tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
+tauri-plugin-deep-link = "2"
+tauri-plugin-notification = "2"
+# Direct handle access is required so a notification click can focus the app and navigate to its chat.
+notify-rust = { version = "4.18.0", features = ["preview-macos-un"] }
+tauri-plugin-autostart = "2"
+tauri-plugin-window-state = "2"
+# Self-hosted auto-update (T-412): checks GET /v1/client/updates/:platform/:arch, verifies the minisign
+# signature against the embedded public key, downloads + installs. Force-update (min_supported) is a
+# separate server-driven blocking screen; this plugin only handles the optional in-place upgrade.
+tauri-plugin-updater = "2"
+# Refresh token in the OS secret store. On Linux the sync-secret-service backend talks the D-Bus Secret
+# Service (GNOME Keyring / KWallet) via libdbus (dbus-1, present on this server) with crypto-rust doing the
+# session AES in pure Rust — compiles headless here; apple-native/windows-native pull Keychain/DPAPI on
+# those targets. Pinned to v3 (stable API; v4 is an unreleased-API rewrite with renamed features).
+keyring = { version = "3", features = ["sync-secret-service", "crypto-rust", "apple-native", "windows-native"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+zeroize = "1"
+url = "2"
+# T-452: load the official tdjson runtime from the packaged resource or GC_TDLIB_PATH without
+# statically linking a platform-specific binary into the shared Rust source tree.
+libloading = "0.8"
+# Process-local capability leases for connector vault ownership.
+getrandom = "0.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# Real UNUserNotificationCenter authorization state. Tauri's desktop permission facade always returns
+# Granted, which is not sufficient for an honest macOS settings toggle.
+mac-usernotifications = "0.3.1"
+
+[dev-dependencies]
+minisign-verify = "=0.2.5"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+panic = "abort"

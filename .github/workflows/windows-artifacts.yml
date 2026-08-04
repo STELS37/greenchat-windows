@@ -1,0 +1,287 @@
+# Manual fallback for GreenChat Windows artifacts.
+# Automatic Windows builds run through infra/windows-builder and the direct Linux -> Windows SSH worker,
+# so GitHub-hosted runners and paid Actions minutes are not part of the production release path.
+# This workflow remains available only for an explicit future diagnostic run.
+
+# Unsigned validation installers are never uploaded or published.
+name: windows-artifacts
+run-name: Windows artifacts ${{ inputs.source_sha || github.sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact current master SHA to build
+        required: false
+        type: string
+      server_origin:
+        description: HTTPS GreenChat backend origin baked into the application
+        required: true
+        default: https://greenchat.globalsystem.cc
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: green-chat-windows-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GC_SOURCE_SHA: ${{ inputs.source_sha || github.sha }}
+  GC_SERVER: ${{ inputs.server_origin || 'https://greenchat.globalsystem.cc' }}
+  GC_BUILD_JOBS: '2'
+  GC_VCPKG_ROOT: C:\vcpkg
+  VCPKG_DISABLE_METRICS: '1'
+
+jobs:
+  validate-windows:
+    if: github.ref == 'refs/heads/master'
+    runs-on: windows-latest
+    timeout-minutes: 150
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Prove exact latest-master identity
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ((git rev-parse HEAD).Trim() -ne $env:GC_SOURCE_SHA) { throw 'checkout SHA mismatch' }
+          git fetch --no-tags origin master
+          node scripts/windows-release-inputs.mjs --source $env:GC_SOURCE_SHA --latest (git rev-parse origin/master).Trim()
+          if (git status --porcelain) { throw 'checkout is dirty before build' }
+          if ($env:GC_SERVER -notmatch '^https://') { throw 'GC_SERVER must use HTTPS' }
+
+      - name: Set up Windows toolchains
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.0'
+          cache: npm
+          cache-dependency-path: clients/package-lock.json
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Export x64 MSVC build tools
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Cache Rust build outputs
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './clients/desktop/src-tauri -> target'
+          key: windows-validation-x86_64
+
+      - name: Cache pinned TDLib native build
+        uses: actions/cache@v4
+        with:
+          path: var/build/tdlib
+          key: tdlib-windows-x64-${{ hashFiles('clients/third_party/tdlib/PINNED.env') }}
+
+      - name: Install native build prerequisites
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          choco install gperf php -y --no-progress
+          npm.cmd install --global '@tauri-apps/cli@2.11.4'
+          foreach ($tool in @('cmake.exe','dumpbin.exe','gperf.exe','php.exe','tauri')) {
+            if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool is unavailable" }
+          }
+          if (-not (Test-Path (Join-Path $env:GC_VCPKG_ROOT 'vcpkg.exe'))) { throw 'vcpkg.exe is unavailable' }
+
+      - name: Run Windows contracts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node scripts/build-windows-desktop.mjs --self-check
+          node --test scripts/build-windows-desktop.test.mjs scripts/windows-release-candidate.test.mjs scripts/windows-release-inputs.test.mjs
+
+      - name: Build, install-check and launch unsigned CI validation app
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP "GreenChat-Windows-validation-$($env:GC_SOURCE_SHA)"
+          node scripts/build-windows-desktop.mjs --arch x64 --out $out --allow-unsigned
+          $manifest = Get-ChildItem -Path $out -Recurse -Filter 'windows-x64-release.json' | Select-Object -First 1
+          if (-not $manifest) { throw 'Windows validation manifest was not produced' }
+          $data = Get-Content $manifest.FullName -Raw | ConvertFrom-Json
+          if ($data.signed -ne $false) { throw 'validation lane unexpectedly claims a production signature' }
+          if ($data.update_target) { throw 'unsigned validation lane must not produce an updater target' }
+
+      - name: Reject validation superseded during build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git fetch --no-tags origin master
+          node scripts/windows-release-inputs.mjs --source $env:GC_SOURCE_SHA --latest (git rev-parse origin/master).Trim()
+
+  build-signed:
+    if: github.ref == 'refs/heads/master' && vars.WINDOWS_RELEASE_ENABLED == '1'
+    runs-on: windows-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: windows-x64
+            arch: x64
+            rust_target: x86_64-pc-windows-msvc
+            msvc_arch: amd64
+          - id: windows-arm64
+            arch: arm64
+            rust_target: aarch64-pc-windows-msvc
+            msvc_arch: amd64_arm64
+    env:
+      GC_WINDOWS_ARCH: ${{ matrix.arch }}
+      WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      GC_TELEGRAM_API_ID: ${{ secrets.GC_TELEGRAM_API_ID }}
+      GC_TELEGRAM_API_HASH: ${{ secrets.GC_TELEGRAM_API_HASH }}
+
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Prove exact latest-master identity and signing readiness
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ((git rev-parse HEAD).Trim() -ne $env:GC_SOURCE_SHA) { throw 'checkout SHA mismatch' }
+          git fetch --no-tags origin master
+          node scripts/windows-release-inputs.mjs --source $env:GC_SOURCE_SHA --latest (git rev-parse origin/master).Trim()
+          if (git status --porcelain) { throw 'checkout is dirty before build' }
+          if ($env:GC_SERVER -notmatch '^https://') { throw 'GC_SERVER must use HTTPS' }
+          foreach ($name in @(
+            'WINDOWS_CERTIFICATE',
+            'WINDOWS_CERTIFICATE_PASSWORD',
+            'TAURI_SIGNING_PRIVATE_KEY',
+            'GC_TELEGRAM_API_ID',
+            'GC_TELEGRAM_API_HASH'
+          )) {
+            if (-not (Get-Item "env:$name" -ErrorAction SilentlyContinue).Value) { throw "$name is not configured" }
+          }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.22.0'
+          cache: npm
+          cache-dependency-path: clients/package-lock.json
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Export MSVC build tools
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.msvc_arch }}
+
+      - name: Cache Rust build outputs
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './clients/desktop/src-tauri -> target'
+          key: ${{ matrix.rust_target }}
+
+      - name: Cache pinned TDLib native build
+        uses: actions/cache@v4
+        with:
+          path: var/build/tdlib
+          key: tdlib-windows-${{ matrix.arch }}-${{ hashFiles('clients/third_party/tdlib/PINNED.env') }}
+
+      - name: Install native build prerequisites
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          choco install gperf php -y --no-progress
+          npm.cmd install --global '@tauri-apps/cli@2.11.4'
+          foreach ($tool in @('cmake.exe','dumpbin.exe','gperf.exe','php.exe','tauri')) {
+            if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { throw "$tool is unavailable" }
+          }
+          if (-not (Test-Path (Join-Path $env:GC_VCPKG_ROOT 'vcpkg.exe'))) { throw 'vcpkg.exe is unavailable' }
+
+      - name: Build signed standalone Windows application
+        id: build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP "GreenChat-$($env:GC_SOURCE_SHA)-${{ matrix.arch }}"
+          node scripts/build-windows-desktop.mjs --arch '${{ matrix.arch }}' --out $out
+          $manifest = Get-ChildItem -Path $out -Recurse -Filter 'windows-*-release.json' | Select-Object -First 1
+          if (-not $manifest) { throw 'Windows release manifest was not produced' }
+          "artifact_dir=$out" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Reject artifact superseded during build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git fetch --no-tags origin master
+          node scripts/windows-release-inputs.mjs --source $env:GC_SOURCE_SHA --latest (git rev-parse origin/master).Trim()
+
+      - name: Upload verified signed Windows lane
+        uses: actions/upload-artifact@v4
+        with:
+          name: GreenChat-${{ matrix.id }}-${{ env.GC_SOURCE_SHA }}
+          path: ${{ steps.build.outputs.artifact_dir }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  assemble-signed-candidate:
+    if: github.ref == 'refs/heads/master' && vars.WINDOWS_RELEASE_ENABLED == '1'
+    needs: build-signed
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Download both signed architectures
+        uses: actions/download-artifact@v4
+        with:
+          pattern: GreenChat-windows-*-${{ env.GC_SOURCE_SHA }}
+          path: ${{ runner.temp }}/windows-lanes
+          merge-multiple: true
+
+      - name: Assemble immutable Windows release candidate
+        id: assemble
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/GreenChat-Windows-candidate-$GC_SOURCE_SHA"
+          node scripts/windows-release-candidate.mjs --from "$RUNNER_TEMP/windows-lanes" --out "$out"
+          test -s "$out/windows-release-candidate.json"
+          test "$(node -e 'const c=require(process.argv[1]);process.stdout.write(c.source_sha)' "$out/windows-release-candidate.json")" = "$GC_SOURCE_SHA"
+          echo "artifact_dir=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Reject candidate superseded during assembly
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin master
+          node scripts/windows-release-inputs.mjs --source "$GC_SOURCE_SHA" --latest "$(git rev-parse origin/master)"
+
+      - name: Upload universal Windows release candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: GreenChat-windows-release-candidate-${{ env.GC_SOURCE_SHA }}
+          path: ${{ steps.assemble.outputs.artifact_dir }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

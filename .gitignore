@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+clients/node_modules/
+
+# Web and desktop build output
+clients/web/dist/
+clients/desktop/src-tauri/target/
+clients/desktop/src-tauri/resources/tdlib/
+var/
+dist/
+artifacts/
+
+# Secrets and local configuration
+.env
+.env.*
+*.pem
+*.pfx
+*.p12
+*.key
+*.jks
+*.keystore
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+*.log

@@ -1,0 +1,143 @@
+/* Voice-message recorder. The modal owns the microphone lifecycle and review/send step; the live disc
+   gives immediate feedback from Web Audio when available and remains useful on WebViews without it. */
+.gc-voice-note-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, var(--gc-safe-top)) max(12px, var(--gc-safe-right)) max(16px, var(--gc-safe-bottom)) max(12px, var(--gc-safe-left));
+}
+.gc-voice-note-panel {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--gc-border);
+  border-radius: var(--gc-radius-lg);
+  background: var(--gc-panel-solid, var(--gc-card));
+  box-shadow: var(--gc-shadow-lg);
+}
+.gc-voice-note-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.gc-voice-note-head h2 {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gc-voice-note-visual {
+  --gc-voice-level: 0;
+  width: min(220px, 58vw);
+  aspect-ratio: 1;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 38%, color-mix(in srgb, var(--gc-accent) 24%, transparent), transparent 62%),
+    color-mix(in srgb, var(--gc-accent) 8%, var(--gc-card));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gc-accent) 18%, transparent);
+}
+.gc-voice-note-pulse {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--gc-accent);
+  color: var(--gc-on-accent, #fff);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--gc-accent) 28%, transparent);
+  transform: scale(calc(1 + var(--gc-voice-level) * .12));
+  transition: transform 90ms linear;
+}
+.gc-voice-note-pulse .gc-icon {
+  width: 34px;
+  height: 34px;
+}
+.gc-voice-note-livebars {
+  position: absolute;
+  inset-inline: 20px;
+  bottom: 24px;
+  height: 54px;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 4px;
+}
+.gc-voice-note-livebar {
+  width: 4px;
+  height: calc(8px + 42px * var(--gc-voice-level));
+  border-radius: var(--gc-radius-pill);
+  background: color-mix(in srgb, var(--gc-accent-strong) 72%, transparent);
+  transform-origin: bottom;
+  transition: height 90ms linear;
+}
+.gc-voice-note-livebar:nth-child(3n + 1) { transform: scaleY(.68); }
+.gc-voice-note-livebar:nth-child(3n + 2) { transform: scaleY(.86); }
+.gc-voice-note-overlay[data-phase="recording"] .gc-voice-note-visual {
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--gc-danger) 60%, transparent),
+    0 0 0 8px color-mix(in srgb, var(--gc-danger) 8%, transparent);
+}
+.gc-voice-note-preview {
+  width: 100%;
+  min-height: 54px;
+}
+.gc-voice-note-status,
+.gc-voice-note-error {
+  min-height: 24px;
+  margin: 0;
+  text-align: center;
+}
+.gc-voice-note-error { color: var(--gc-danger); }
+.gc-voice-note-actions {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.gc-voice-note-record {
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--gc-accent);
+  box-shadow: var(--gc-shadow-md);
+}
+.gc-voice-note-record > span {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gc-on-accent, #fff);
+  transition: border-radius 140ms ease, transform 140ms ease;
+}
+.gc-voice-note-record.is-recording { background: var(--gc-danger); }
+.gc-voice-note-record.is-recording > span {
+  border-radius: var(--gc-radius-xs);
+  transform: scale(.72);
+}
+@media (max-width: 560px) {
+  .gc-voice-note-overlay { align-items: flex-end; padding-inline: 0; padding-bottom: 0; }
+  .gc-voice-note-panel {
+    width: 100%;
+    border-inline: 0;
+    border-bottom: 0;
+    border-radius: var(--gc-radius-lg) var(--gc-radius-lg) 0 0;
+    padding-bottom: max(18px, var(--gc-safe-bottom));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gc-voice-note-pulse,
+  .gc-voice-note-livebar,
+  .gc-voice-note-record > span { transition: none; }
+}

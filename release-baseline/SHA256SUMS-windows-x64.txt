@@ -1,0 +1,3 @@
+dad082f77270f59d282590a591cd3371c0d52b6ff92d8e1447e7de6c39ed9697  GreenChat-1.0.0-beta.6-windows-x64-portable.zip
+704c631aaac693570d07ed149802aea9507de54db322e63f170cd9fdb00e87a6  GreenChat-1.0.0-beta.6-windows-x64-setup.exe
+a89f73d97cfe17d4db12f38587b11086cb4ea4094ef0920a4770cea561709573  GreenChat-1.0.0-beta.6-windows-x64.msi

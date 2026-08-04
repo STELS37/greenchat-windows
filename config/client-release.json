@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "release_id": "green-chat-1.0.0-beta.6-android.1000025-rev.1",
+  "channel": "beta",
+  "current_version": "1.0.0-beta.6",
+  "published_at": "2026-08-04T10:10:40Z",
+  "notes": "BETA RELEASE: единая Android-сборка versionCode 1000025, собранная из проверенного исходного снимка 381f7894 и подписанная каноническим сертификатом GreenChat. APK: sha256 1fea4b6b7dab2add0fdb4620ad1de67ac8dde26758c5adbee9f84148205f00a3, 5477680 байт. AAB: sha256 c669dafc19a20ac790f8bb8eef91bc2129a9cbb05719cd451dab13eeb9c2e188, 4005558 байт. Web/PWA, прямая установка и Google Play публикуются одним транзакционным контуром и подтверждаются read-back проверкой.",
+  "platforms": {
+    "web": {
+      "status": "available",
+      "url": "/?app=1#/"
+    },
+    "android": {
+      "status": "available",
+      "version_code": 1000025,
+      "pending_version_code": 1000026,
+      "pending_reason": "One canonical build number governs every Android channel. 1000025 is spent by this direct release and by the Google Play bundle serving on the internal and closed-testing tracks, so the next build of the whole edition is 1000026. version_code continues to describe the bytes users are served today.",
+      "min_os": "Android 7.0",
+      "min_supported": "0.0.0",
+      "artifact_filename": "GreenChat-1.0.0-beta.5-android-1000025-release.apk",
+      "size_bytes": 5477680,
+      "sha256": "1fea4b6b7dab2add0fdb4620ad1de67ac8dde26758c5adbee9f84148205f00a3"
+    },
+    "ios": {
+      "status": "web",
+      "url": "/?app=1#/",
+      "native_status": "not_published"
+    },
+    "windows": {
+      "status": "web",
+      "url": "/?app=1#/",
+      "native_status": "preparing"
+    },
+    "macos": {
+      "status": "web",
+      "url": "/?app=1#/",
+      "native_status": "preparing"
+    },
+    "linux": {
+      "status": "available",
+      "arch": "x86_64",
+      "min_supported": "0.0.0",
+      "packages": {
+        "appimage": {
+          "artifact_filename": "GreenChat-1.0.0-beta.5-linux-x86_64.AppImage",
+          "size_bytes": 96045560,
+          "sha256": "274186212339281e8cbec9a5e3cca61010dbf66d814cbe849408a5078c62f6af",
+          "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRckVIZUxTSm8zMmFTb24rZ1d2b21WMlNSUGp6MFNKeDVKd1M4TjZRNTc0bUhEQy9Nbm1MSXRUUWRaRlBFbFVVanVobldvU2dSeGVjVnZXVDBxQkgvQTlSSHVGdmJ0WGcwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1Nzc4NjQ2CWZpbGU6R3JlZW5DaGF0XzEuMC4wLWJldGEuNV9hbWQ2NC5BcHBJbWFnZQpjQ3VqT2lEc1ZFTnpQNlNnemtxZmkxOGJZT2dpejNUUG9wOUVBYUM4RnBkNWk0aDF4MXpyOTU3NzR2TnI4WFBhYkRuZm11YzNkeWM2WFJHbWNXMTFCQT09Cg=="
+        },
+        "deb": {
+          "artifact_filename": "GreenChat-1.0.0-beta.5-linux-amd64.deb",
+          "size_bytes": 15719626,
+          "sha256": "75da5b852d08d21d8c024a475e42db6c8b821ce4e97a7bc4e180b778eb7e6fd7",
+          "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRckVIZUxTSm8zMmRMR0syM1dzSE5WcS9zK2s2bXFJRkw3QXBrYmh2K0tESHJmRUY2dkVjcWYxMkg3bjhROFVBZE1oaWNDbU51QmgvUElCaWxXaS8wUEJuY2pMQ0hSM1E0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1Nzc4NjY1CWZpbGU6R3JlZW5DaGF0XzEuMC4wLWJldGEuNV9hbWQ2NC5kZWIKT0dHYi9mbm5IZVlEVDBGbE52NTFIK1lLZVRjM3RrSlVxbVdZTCtwWE5jV2l4WStYSGt5SUtQYlN2emUrQWdmZUxONW5rVy8xbUVrOVlFbjVkSDI1QkE9PQo="
+        },
+        "rpm": {
+          "artifact_filename": "GreenChat-1.0.0-beta.5-linux-x86_64.rpm",
+          "size_bytes": 20013552,
+          "sha256": "bbe7e620b70e70af7fb3228d9fe85f0e7b1cdc5c53856012201bd6b2b017413d",
+          "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRckVIZUxTSm8zMllWaGpwSE5PSzBoeGxaTzRkYW5TV2JhRnB5TEJLK0pZZERQRmZkN2RKdFFsUzhrTWNGald0bWFWVEduVWplQThUTThzd2dFN2J4TnhUcDRUSEVaVUFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg1Nzc4NjQ2CWZpbGU6R3JlZW5DaGF0LTEuMC4wLWJldGEuNS0xLng4Nl82NC5ycG0KQ3YxdU91aTA4c3liOWdUZ01Mc1A0ZmcxOVdQT3pJeXNTeUt6MVhWaE1rODB3Q3ZrZTNDeUswcHBYQm91VVk0V0lWKzFvUjkrUTg2OGNmN0trWG5nREE9PQo="
+        }
+      },
+      "version": "1.0.0-beta.5"
+    }
+  },
+  "catalog_revision": 1
+}

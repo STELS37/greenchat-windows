@@ -1,0 +1,215 @@
+/* clients/web/src/shortscreen.css — V96, the short-viewport layer (owner directive 2026-07-30, B-P0-5).
+ *
+ * Loaded last, after styles.css, redesign.css and brand.css, so it can correct the shipped layout
+ * without editing them: the two pre-beta executors share one tree and redesign.css currently carries
+ * the other executor's uncommitted layers. This file is the B-P0-5 surface (keyboard / rotation).
+ *
+ * Measured defect (signed APK versionCode 1000010 on the emulator, 1080x2400 @ dpr 2.75, route
+ * #/chat/16, CDP against the device WebView, 2026-07-31):
+ *
+ *   orientation   keyboard   window (CSS px)   .gc-feed-main (the messages)
+ *   portrait      closed     393 x 801         fine
+ *   portrait      open       393 x 494         fine
+ *   landscape     closed     825 x 345         fine  (composer bottom 334 <= 345)
+ *   landscape     OPEN       825 x 115         ZERO PX — every message gone
+ *
+ * The window is 825 px WIDE and 115 px TALL, so every "this is a phone" rule in the product missed
+ * it: they are all written as `@media (max-width: 760px)`. The app therefore drew its two-pane
+ * desktop shell into a 115 px slot — the icon rail alone asked for 246 px, the chat-list header for
+ * 171 px, and inside the thread the header (74 px) plus the composer (61 px) needed 135 px of the
+ * 94 px pane. Result on screen: a clipped rail, half a chat list, "Nothing here yet" cut through
+ * the middle, and not one line of the conversation the user was typing into.
+ *
+ * The fix reuses the decision the product already made for phones — a conversation owns the whole
+ * screen — and keys it on HEIGHT as well. The threshold sits between the two measured states
+ * (115 broken, 345 good); 300 px leaves ~45 px of margin on each side of it, so a phone in
+ * landscape WITHOUT the keyboard keeps its full shell exactly as verified.
+ *
+ * The thread header is hidden rather than shrunk because arithmetic leaves no alternative: 115 px
+ * minus the 61 px composer is 54 px, and a 40 px header would leave 14 px — still no message. The
+ * back affordance is not lost: Android's back key closes the IME first (verified on the device:
+ * mInputShown true -> false), the window returns to 345 px and the header comes back with it.
+ */
+
+@media (max-height: 300px) {
+  /* 1. The shell: one column, no rounded card inset — the pane gets the whole window.
+        Side safe-area padding stays, because in landscape the cutout is on a SIDE. */
+  .gc-superapp {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+    padding: 0 max(0px, var(--gc-safe-right)) 0 max(0px, var(--gc-safe-left));
+  }
+  /* Inside a conversation the thread owns every pixel: at the measured 115 px the composer alone
+     is 61 px, so a bottom bar would leave no message on screen. Nothing is stranded — the tab bar
+     comes back the moment the user leaves the thread, and Android's back key does that. */
+  .gc-superapp-detail .gc-app-rail { display: none; }
+
+  /* 1b. V107 — everywhere else the tab bar STAYS, only smaller.
+        Measured defect (signed APK versionCode 1000013 on the emulator, display forced to landscape
+        with `settings put system user_rotation 1`, system font size 2x, window 569 x 272 CSS px,
+        CDP against the device WebView, 2026-07-31): on the list routes the V96 rule above hid the
+        bar unconditionally, and the rail is the ONLY navigation a phone has — `.gc-app-rail` IS the
+        bottom tab bar under `@media (max-width: 760px)`. Probe result on that window: the sole
+        nav-ish box on screen was `.gc-shell-nav` at 0 x 0 inside the hidden rail, so «Звонки»,
+        «Кошелёк», «Биржа» and «Ещё» had no reachable entry point at all — the user was locked into
+        «Чаты» until the phone was turned back upright.
+        The bar is not merely re-shown, it is compacted: labels off and 50 px instead of 66 px, so
+        even the worst measured window (115 px, keyboard open on a list route) keeps 65 px of list
+        above it. 50 px is not a free choice, it is the arithmetic of the hit box the product pins
+        for itself in visual_touch_target_v97: 50 - 2 - 2 padding - 1 border-top = 45 >= 44. Both
+        smaller bars were measured on the device and rejected by that floor — 40 px gave 107 x 35
+        per destination, 48 px gave 107 x 43. The glyphs carry `title` and `aria-current`, so the
+        icon-only form stays labelled for assistive tech. */
+  .gc-superapp:not(.gc-superapp-detail) {
+    --gc-mobile-nav: calc(50px + var(--gc-safe-bottom));
+    padding-bottom: var(--gc-mobile-nav);
+  }
+  .gc-superapp:not(.gc-superapp-detail) .gc-app-rail {
+    padding-top: 2px;
+    padding-bottom: max(2px, var(--gc-safe-bottom));
+  }
+  .gc-superapp:not(.gc-superapp-detail) .gc-shell-item-label { display: none; }
+
+  /* 2. The stage: full height, no chrome. Specificity 0-2-0 matches the phone-width rules this
+        file must beat (`.gc-superapp-detail .gc-superapp-stage`), and source order decides. */
+  .gc-superapp .gc-superapp-stage {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .gc-superapp .gc-superapp-split { display: block; }
+  .gc-superapp .gc-superapp-list,
+  .gc-superapp .gc-superapp-view {
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+  /* One pane at a time: inside a chat the list goes, on the home route the empty view goes. */
+  .gc-superapp-detail .gc-superapp-list { display: none; }
+  .gc-superapp-home .gc-superapp-view { display: none; }
+
+  /* 3. The thread: the list is the only part that scrolls, so the composer cannot be pushed under
+        the keyboard again. (The header itself is dealt with by V114 below — at this threshold it
+        stays, because a 320 dp phone lying on its side is only 296 px tall with NO keyboard.) */
+  .gc-superapp .gc-feed {
+    height: 100%;
+    max-width: none;
+  }
+  .gc-superapp .gc-feed-main {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+/* ── V114 — the thread header disappeared on a small phone that had no keyboard open ────────────
+ *
+ * V96 hid `.gc-feed-header` for every window shorter than 300 px, on the reasoning that such a
+ * window only happens when the keyboard is up (measured then: 825 x 115). That reasoning holds for
+ * a 390 dp phone (landscape 345 px, keyboard closed) but not for the smallest width this release
+ * must support. Measured on the signed APK (device gc-android-p0, `wm density 540` = 320 dp,
+ * ru-RU, route #/chat/17, CDP against the device WebView, 2026-08-01):
+ *
+ *   320 dp landscape, keyboard CLOSED   664 x 296   header display:none  <- DEFECT
+ *   320 dp landscape, keyboard OPEN     664 x 112   header display:none  <- correct
+ *
+ * In the defective state the conversation had no back button, no peer name, no avatar, no call
+ * button and no chat menu: the probe read `.gc-feed-header` as a 0 x 0 box while 235 px of messages
+ * and a 61 px composer were painted normally. Nothing needed that space — hiding it bought the user
+ * 56 px he was not short of, and took away the only on-screen way to leave the chat or to see whom
+ * he was writing to.
+ *
+ * So the header is keyed on its OWN arithmetic instead of the shell's: it goes only when it truly
+ * cannot coexist with the composer. Composer 61 px + header 56 px = 117 px of chrome; at the 200 px
+ * threshold that still leaves 83 px — more than one message row (35 px measured) — and at the
+ * measured keyboard-open window (112 px) the rule engages exactly as V96 intended.
+ * Both device states above were re-measured after this change; see the V114 rows in the P0 matrix.
+ * ── */
+@media (max-height: 200px) {
+  .gc-superapp .gc-feed-header { display: none; }
+}
+
+/* ── V118 — the thread's own chrome left no thread on a 320 dp phone ────────────────────────────
+ *
+ * V96 and V114 fixed the SHELL around the conversation. What was left is one level in: the
+ * conversation's own header, pinned bar and composer, which together outgrow the window with the
+ * keyboard up. Measured on the signed artifact (device gc-android-p0, `wm density 540` = 320 dp,
+ * ru-RU, route #/chat/17, real IME up, read-only probe var/ux-audit/tools/m_shortcol_v118.mjs,
+ * APK sha256 c53407eb…, 2026-08-01):
+ *
+ *   case                      window     header   pinned   composer   .gc-feed-main   newest bubble
+ *   320 dp landscape  fs1.0   664 x 112     — *     48       60.9         3.1 px       11 px under it
+ *   320 dp portrait   fs2.0   320 x 393   210.3     48      134.9         0.0 px       14 px under it
+ *   * hidden by V114 above, and correctly so
+ *
+ * `.gc-feed-list` cannot shrink into what is left: it is a border box, and a border box is never
+ * shorter than its own padding, so `padding: 14px 10px 20px` gives the messages a 34 px floor no
+ * matter what `min-height: 0` says. In portrait the pane is 0 px tall and — at 393 px no media
+ * query in this file matches, so `.gc-feed-main` keeps `overflow: visible` — those 34 px are simply
+ * painted over the composer. At system font size 2.0 the user typing a reply saw no conversation.
+ *
+ * The class is set by the thread itself (ui/src/screens/feed_screen.ts, `is-cramped`: window
+ * shorter than 14 root-font units) because this threshold must follow the ANDROID FONT SIZE and a
+ * media query cannot: measured with m_mqem_v118.mjs on the same device at 2.0x, `(min-height: N em)`
+ * resolves em to 15.99 px while the root font is 32 px. The window is no help on its own either —
+ * 320 dp portrait with the IME up is 393 px at 1.0x, 1.3x and 2.0x alike, yet only 2.0x fails.
+ *
+ * Verified live with this exact rule injected into the running artifact (same probe, then kb2.mjs):
+ *
+ *   case                      .gc-feed-main   list box   newest bubble   verdict
+ *   320 dp landscape  fs1.0   3.1 -> 51.0 px  0..51      10..45          6 px of clearance
+ *   320 dp portrait   fs2.0   0.0 -> 258 px   0..258     …               (see the P0 matrix)
+ *
+ * Trimming the padding is half the rule and not cosmetic: without it the 34 px floor still eats
+ * two thirds of a 51 px pane. 4/6 px keeps the last bubble off the composer edge (measured 6 px)
+ * while giving the message 41 of those 51 px.
+ * ── */
+.gc-feed.is-cramped .gc-feed-header,
+.gc-feed.is-cramped .gc-feed-pinned { display: none; }
+.gc-feed.is-cramped .gc-feed-list {
+  padding-block: 4px 6px;
+  scroll-padding-block: 6px;
+}
+
+/* ── V106 — the pane that was never given a height (B-P0-5, rotation axis) ──────────────────────
+ *
+ * Same session as V96, same device (signed APK versionCode 1000010, emulator 1080x2400 @ dpr 2.75,
+ * CDP against the device WebView, 2026-07-31), but the keyboard CLOSED and the phone on its side:
+ * 825 x 369 CSS px. Measured `.gc-superapp-stage` client/scroll against `.gc-superapp-view`:
+ *
+ *   Чаты      348 / 348    view  348 / 348    ok
+ *   Звонки    348 / 568    view  568 / 568    220 px unreachable
+ *   Кошелёк   348 / 1495   view 1495 / 1495  1147 px unreachable
+ *   Биржа     348 / 722    view  722 / 722    374 px unreachable
+ *   Ещё       348 / 862    view  862 / 862    514 px unreachable — the whole «Настройки и аккаунт»
+ *                                             list: Профиль, Приватность, Безопасность, Лицензии
+ *                                             and the sign-out row, with no scrollbar and no page
+ *                                             scroll (document.scrollingElement 369 / 369).
+ *
+ * The stage clips (`overflow: hidden`, styles.css:2954), so the overflow was not scrollable — it
+ * was deleted from the screen. The cause is the V96 lesson again, one level lower: the pane is only
+ * given `height: 100%` inside `@media (max-width: 760px)` (styles.css:3872), and this window is
+ * 825 px WIDE. With the pane at `height: auto` everything below it inherits nothing to resolve
+ * against: `.gc-superapp .gc-settings { height: 100% }` becomes auto, and the V73b scroll container
+ * `.gc-settings-index` (`flex: 1; min-height: 0; overflow-y: auto`) never receives a bounded frame,
+ * so it grows instead of scrolling (measured 771 / 771 — a scroller with nothing to scroll).
+ *
+ * It is not a landscape bug, it is a WIDTH-KEYED-INVARIANT bug: 1280x800 clipped 67 px and 900x700
+ * clipped 183 px in the same single-pane shell. So the correction carries no media query at all.
+ * `min-height: 0` rides along because without it a grid/flex child refuses to shrink below its
+ * content and the same overflow reappears one level up.
+ *
+ * Verified live on the device with this exact rule injected (scrolled each pane to its end):
+ *   Звонки  .gc-calls-body     238 / 458   bottom reached, last row visible
+ *   Кошелёк .gc-finance-body   190 / 1337  bottom reached, last row visible
+ *   Биржа   .gc-finance-body   190 / 565   bottom reached, last row visible
+ *   Ещё     .gc-settings-index 257 / 771   bottom reached, «Лицензии» visible
+ * ── */
+
+.gc-superapp-single .gc-superapp-view,
+.gc-superapp-single .gc-superapp-list {
+  height: 100%;
+  min-height: 0;
+}

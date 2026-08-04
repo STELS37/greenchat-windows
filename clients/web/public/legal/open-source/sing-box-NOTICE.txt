@@ -1,0 +1,19 @@
+# sing-box libbox notice
+
+GreenChat's optional Android app-scoped REALITY connector uses the `experimental/libbox` output from
+sing-box `v1.11.15`, commit `bc35aca01704497c179da1a03e45ad8e32f1a51b`.
+
+The component is built from upstream source by `clients/mobile/build-reality-engine.sh` with only the
+`with_utls` build tag required by the REALITY client. Unused TUN/gVisor, QUIC, WireGuard, ECH and Clash
+API build tags are deliberately excluded. No untracked or operator-supplied AAR is an accepted release
+input. The exact source, toolchain and output hashes are recorded in `clients/mobile/reality-engine.lock.json`.
+
+The upstream license is included in `LICENSE`. In addition to the GPLv3-or-later text, the upstream
+license file states that derivative works may not use the application name or imply association without
+prior consent. GreenChat must not use the sing-box project name or imply an upstream association.
+
+The project owner granted standing distribution approval on 2026-07-21. Every distributable Android
+artifact containing this engine must pass the owner lock and publish one exact multi-license Corresponding
+Source archive beside the APK/AAB. The archive contains the reviewed GreenChat AGPL source and the exact
+sing-box GPL source, is bound to the release by size/SHA-256, and is verified before Gradle configures an
+engine-bearing release. Missing, symlinked, tampered or commit-mismatched source fails closed.

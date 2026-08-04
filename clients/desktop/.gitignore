@@ -1,0 +1,15 @@
+# Rust / Tauri build output — never committed.
+# No trailing slash: on this host the target dir is a symlink to a shared cargo cache
+# (/mnt/data/caches/...), and a `dir/` pattern never matches a symlink, so the build
+# output showed up as untracked and made the release readiness check see a dirty tree.
+src-tauri/target
+src-tauri/gen/
+
+# T-452 native TDLib outputs; README remains tracked so the Tauri resource map has a stable directory.
+src-tauri/resources/tdlib/*.so
+src-tauri/resources/tdlib/*.so.*
+src-tauri/resources/tdlib/*.dylib
+src-tauri/resources/tdlib/*.dll
+src-tauri/resources/tdlib/*-MANIFEST.txt
+src-tauri/resources/tdlib/TDLIB_LICENSE_1_0.txt
+src-tauri/resources/tdlib/OPENSSL_LICENSE.txt

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.social-networking</string>
+  <key>NSCameraUsageDescription</key>
+  <string>Green Chat uses the camera only when you start a video call or choose to send a photo.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Green Chat uses the microphone only for voice messages and audio or video calls.</string>
+  <key>NSLocalNetworkUsageDescription</key>
+  <string>Green Chat can connect to a Green Chat server on your local network when you explicitly select one.</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSHumanReadableCopyright</key>
+  <string>Copyright © 2026 Green Chat. All rights reserved.</string>
+</dict>
+</plist>

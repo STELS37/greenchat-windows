@@ -1,0 +1,11 @@
+# Default ownership
+* @STELS37
+
+# Security-sensitive release boundary
+/.github/workflows/ @STELS37
+/CODE_SIGNING_POLICY.md @STELS37
+/SECURITY.md @STELS37
+/scripts/ @STELS37
+/clients/desktop/ @STELS37
+/clients/third_party/ @STELS37
+/config/ @STELS37

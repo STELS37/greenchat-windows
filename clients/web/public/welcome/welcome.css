@@ -1,0 +1,83 @@
+/* T-715: styles for the static /welcome/ landing (RU + EN pages share this file). Self-contained on
+   purpose: the landing must not import the app bundle or clients/ui tokens (DS-line zone), so the
+   few design tokens it needs are duplicated here as local custom properties. System font stack only —
+   the strict CSP (font-src 'self') forbids remote fonts and we ship none. */
+:root {
+  --w-bg: #ffffff;
+  --w-bg-card: #f4f6f5;
+  --w-fg: #14181a;
+  --w-fg-muted: #5a6468;
+  --w-accent: #1f8a4c;
+  --w-accent-fg: #ffffff;
+  --w-border: #dde3e0;
+  --w-radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --w-bg: #0f1115;
+    --w-bg-card: #171b21;
+    --w-fg: #e8eaed;
+    --w-fg-muted: #9aa4ab;
+    --w-accent: #2ea75f;
+    --w-accent-fg: #08110b;
+    --w-border: #262c33;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--w-bg);
+  color: var(--w-fg);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  line-height: 1.55;
+}
+
+.wrap { max-width: 880px; margin: 0 auto; padding: 24px 20px 48px; }
+
+.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; }
+.brand img { display: block; }
+.lang { display: flex; gap: 10px; font-weight: 600; }
+.lang a { color: var(--w-fg-muted); text-decoration: none; }
+.lang a:hover, .lang a:focus-visible { color: var(--w-accent); text-decoration: underline; }
+.lang span[aria-current] { color: var(--w-fg); }
+
+.hero { text-align: center; margin-top: 40px; }
+.hero h1 { font-size: clamp(1.7rem, 4.5vw, 2.6rem); line-height: 1.2; margin: 0 0 16px; }
+.tagline { max-width: 640px; margin: 0 auto; color: var(--w-fg-muted); font-size: 1.08rem; }
+
+.cta { margin: 28px 0 0; }
+.btn {
+  display: inline-block;
+  padding: 13px 34px;
+  border-radius: 999px;
+  background: var(--w-accent);
+  color: var(--w-accent-fg);
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-decoration: none;
+}
+.btn:hover, .btn:focus-visible { filter: brightness(1.08); }
+
+.features {
+  margin-top: 48px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+.features article {
+  background: var(--w-bg-card);
+  border: 1px solid var(--w-border);
+  border-radius: var(--w-radius);
+  padding: 18px 20px;
+}
+.features h2 { margin: 0 0 8px; font-size: 1.1rem; }
+.features p { margin: 0; color: var(--w-fg-muted); font-size: 0.98rem; }
+
+.foot { margin-top: 56px; border-top: 1px solid var(--w-border); padding-top: 20px; text-align: center; }
+.foot nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 24px; }
+.foot a { color: var(--w-fg-muted); text-decoration: underline; }
+.foot a:hover, .foot a:focus-visible { color: var(--w-accent); }
+.fine { margin: 16px 0 0; color: var(--w-fg-muted); font-size: 0.9rem; }

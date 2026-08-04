@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "release_id": "green-chat-1.0.0-beta.6-windows-x64",
+  "version": "1.0.0-beta.6",
+  "source_sha": "1fc59313cdb73ba7f973af7af02d864b5f23864f",
+  "built_at": "2026-08-04T13:57:40.424Z",
+  "platform": "windows",
+  "architecture": "x86_64",
+  "rust_target": "x86_64-pc-windows-msvc",
+  "server_origin": "https://greenchat.globalsystem.cc",
+  "dirty_source": false,
+  "signed": false,
+  "authenticode": {
+    "setup": {
+      "Status": "NotSigned",
+      "Subject": "",
+      "Thumbprint": "",
+      "TimeSubject": ""
+    },
+    "msi": {
+      "Status": "NotSigned",
+      "Subject": "",
+      "Thumbprint": "",
+      "TimeSubject": ""
+    },
+    "binary": {
+      "Status": "NotSigned",
+      "Subject": "",
+      "Thumbprint": "",
+      "TimeSubject": ""
+    }
+  },
+  "tdlib": {
+    "version": "1.8.66",
+    "bytes": 32135168,
+    "sha256": "2d34c3a3d93242cb1ec2957d3fbed631255b987f8fca549460e0285259509f9a"
+  },
+  "update_target": null,
+  "session_identity": {
+    "client_header": "desktop/1.0.0-beta.6",
+    "device_header": "GreenChat Desktop Windows x86_64 1.0.0-beta.6",
+    "secure_store": "Windows DPAPI / Credential Manager"
+  },
+  "files": [
+    {
+      "name": "GreenChat-1.0.0-beta.6-windows-x64-portable.zip",
+      "bytes": 19397622,
+      "sha256": "dad082f77270f59d282590a591cd3371c0d52b6ff92d8e1447e7de6c39ed9697"
+    },
+    {
+      "name": "GreenChat-1.0.0-beta.6-windows-x64-setup.exe",
+      "bytes": 15244035,
+      "sha256": "704c631aaac693570d07ed149802aea9507de54db322e63f170cd9fdb00e87a6"
+    },
+    {
+      "name": "GreenChat-1.0.0-beta.6-windows-x64.msi",
+      "bytes": 19795968,
+      "sha256": "a89f73d97cfe17d4db12f38587b11086cb4ea4094ef0920a4770cea561709573"
+    }
+  ]
+}

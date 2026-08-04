@@ -1,0 +1,13 @@
+# Client build artifacts and deps — never committed (server rule: ws is the only server runtime dep;
+# client dev-deps live here and stay here).
+node_modules/
+web/dist/
+desktop/target/
+desktop/gen/
+# The mobile www/ is the assembled shared bundle (rebuilt by prepare.mjs); the native android/ project
+# source IS tracked (deep-link filters, signing config, brand icons) — its own android/.gitignore drops
+# the build artifacts / copied web assets / generated config. ios/ is reproducibly generated on Linux/macOS; only Xcode build/signing needs macOS (T-415).
+mobile/www/
+mobile/ios/
+mobile/artifacts/
+*.log

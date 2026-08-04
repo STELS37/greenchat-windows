@@ -1,0 +1,87 @@
+/* V194 — received documents behave like native messenger attachments, not anonymous download pills. */
+.gc-file {
+  position: relative;
+  width: min(100%, 340px);
+  min-width: min(240px, 100%);
+  min-height: 64px;
+  padding: 10px 10px 10px 12px;
+  gap: 11px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  transition: background 140ms ease, border-color 140ms ease, transform 100ms ease;
+}
+
+.gc-file:hover {
+  background: color-mix(in srgb, currentColor 11%, transparent);
+  border-color: color-mix(in srgb, currentColor 19%, transparent);
+}
+
+.gc-file:active {
+  transform: scale(0.992);
+}
+
+.gc-file:focus-visible {
+  outline: 2px solid var(--gc-accent);
+  outline-offset: 2px;
+}
+
+.gc-file.is-loading {
+  cursor: progress;
+}
+
+.gc-file.is-error {
+  border-color: color-mix(in srgb, var(--gc-danger) 52%, transparent);
+}
+
+.gc-file-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.gc-file-icon .gc-icon {
+  width: 21px;
+  height: 21px;
+}
+
+.gc-file-meta {
+  justify-content: center;
+  gap: 3px;
+  overflow: hidden;
+}
+
+.gc-file-name {
+  display: -webkit-box;
+  min-height: 1.25em;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  line-height: 1.25;
+}
+
+.gc-file-size {
+  line-height: 1.2;
+}
+
+.gc-file-dl {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 380px) {
+  .gc-file {
+    min-width: 0;
+  }
+}
