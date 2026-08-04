@@ -3,31 +3,43 @@ updates:
   - package-ecosystem: npm
     directory: /clients
     schedule:
-      interval: weekly
+      interval: monthly
       day: monday
-      time: "06:00"
+      time: "06:15"
       timezone: Europe/Berlin
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     groups:
-      client-development:
-        dependency-type: development
-      client-runtime:
-        dependency-type: production
+      client-minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: cargo
     directory: /clients/desktop/src-tauri
     schedule:
-      interval: weekly
+      interval: monthly
       day: monday
-      time: "06:15"
+      time: "06:30"
       timezone: Europe/Berlin
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
+    groups:
+      desktop-minor-and-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
       day: monday
-      time: "06:30"
+      time: "06:45"
       timezone: Europe/Berlin
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
+    groups:
+      github-actions:
+        patterns: ["*"]
