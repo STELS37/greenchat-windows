@@ -27,7 +27,7 @@
     "check:telegram-web-secrets": "node scripts/check-telegram-web-secrets.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
+    "@playwright/test": "^1.62.1",
     "@types/node": "^22.0.0",
     "esbuild": "^0.28.1",
     "libsodium-wrappers-sumo": "^0.8.4",
