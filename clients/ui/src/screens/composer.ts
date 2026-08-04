@@ -8,7 +8,7 @@ import type { ChatMember } from "./types.ts";
 import { el, clear } from "../dom.ts";
 import { parseMention, filterMembers, applyMention } from "./feed_model.ts";
 import { icon } from "../icons.ts";
-import { createEmojiPicker, insertAtCaret, type EmojiPicker, type EmojiStorageLike } from "./emoji_picker.ts";
+import type { EmojiPicker, EmojiStorageLike } from "./emoji_picker.ts";
 import type { StickerPicker } from "./sticker_picker.ts";
 
 import { voiceNoteStrings } from "./voice_note_strings.ts";
@@ -46,6 +46,12 @@ export interface Composer {
 }
 
 const MENTION_LIMIT = 6;
+
+const insertEmojiAtCaret = (value: string, start: number, end: number, glyph: string): { value: string; caret: number } => {
+  const from = Math.max(0, Math.min(start, value.length));
+  const to = Math.max(from, Math.min(end, value.length));
+  return { value: value.slice(0, from) + glyph + value.slice(to), caret: from + glyph.length };
+};
 
 export function createComposer(deps: ComposerDeps): Composer {
   const { i18n } = deps;
@@ -96,9 +102,9 @@ export function createComposer(deps: ComposerDeps): Composer {
     fileInput.value = ""; // allow re-picking the same file
   });
 
-  // Emoji panel (V7). Without it, emoji required the OS keyboard — and on desktop web there is none,
-  // so the single most used messenger control was unreachable. The button sits inside the pill on the
-  // left, the panel opens above the row (Telegram layout).
+  // Emoji is a secondary surface and its curated catalogue is several kilobytes. Keep the composer
+  // interactive on the first frame and fetch the picker only after the user presses its trigger. This
+  // also restores honest headroom to the strict 300 KiB initial-transfer gate without removing emoji.
   const emojiBtn = el("button", {
     type: "button",
     class: "gc-icon-btn gc-composer-emoji",
@@ -107,37 +113,72 @@ export function createComposer(deps: ComposerDeps): Composer {
     "aria-haspopup": "dialog",
     "aria-expanded": "false",
   }, [icon("smile")]);
-  const emoji: EmojiPicker = createEmojiPicker({
-    i18n,
-    storage: deps.emojiStorage,
-    onOpenChange: (opened) => {
-      if (opened) deps.stickers?.close();
-      syncEmojiBtn();
-    },
-    onPick: (glyph) => {
-      const start = textarea.selectionStart ?? textarea.value.length;
-      const end = textarea.selectionEnd ?? start;
-      const next = insertAtCaret(textarea.value, start, end, glyph);
-      textarea.value = next.value;
-      textareaWasEdited = true;
-      textarea.setSelectionRange?.(next.caret, next.caret);
-      autosize();
-      scheduleDraft();
-      syncAction();
-      textarea.focus();
-    },
-  });
+  let emoji: EmojiPicker | null = null;
+  let emojiLoad: Promise<EmojiPicker | null> | null = null;
+  let emojiActivationPending = false;
+  let destroyed = false;
+
   const syncEmojiBtn = (): void => {
-    emojiBtn.setAttribute("aria-expanded", emoji.isOpen() ? "true" : "false");
-    emojiBtn.classList.toggle("is-active", emoji.isOpen());
+    const opened = emoji?.isOpen() ?? false;
+    emojiBtn.setAttribute("aria-expanded", opened ? "true" : "false");
+    emojiBtn.classList.toggle("is-active", opened);
   };
-  // `aria-haspopup="dialog"` and `aria-expanded` above say that a dialog exists and whether it is
-  // showing; neither says WHICH one. `aria-controls` closes that loop, and it can only be written here
-  // because the panel's id is generated per instance (two composers can be mounted at once).
-  emojiBtn.setAttribute("aria-controls", emoji.root.id);
+  const ensureEmoji = (): Promise<EmojiPicker | null> => {
+    if (emoji) return Promise.resolve(emoji);
+    if (emojiLoad) return emojiLoad;
+    emojiBtn.setAttribute("aria-busy", "true");
+    emojiLoad = import("./emoji_picker.ts")
+      .then(({ createEmojiPicker }) => {
+        if (destroyed) return null;
+        const next = createEmojiPicker({
+          i18n,
+          storage: deps.emojiStorage,
+          onOpenChange: (opened) => {
+            if (opened) deps.stickers?.close();
+            syncEmojiBtn();
+          },
+          onPick: (glyph) => {
+            const start = textarea.selectionStart ?? textarea.value.length;
+            const end = textarea.selectionEnd ?? start;
+            const nextText = insertEmojiAtCaret(textarea.value, start, end, glyph);
+            textarea.value = nextText.value;
+            textareaWasEdited = true;
+            textarea.setSelectionRange?.(nextText.caret, nextText.caret);
+            autosize();
+            scheduleDraft();
+            syncAction();
+            textarea.focus();
+          },
+        });
+        if (destroyed) {
+          next.destroy();
+          return null;
+        }
+        emoji = next;
+        root.prepend(next.root);
+        emojiBtn.setAttribute("aria-controls", next.root.id);
+        return next;
+      })
+      .catch(() => null)
+      .finally(() => {
+        emojiLoad = null;
+        emojiBtn.removeAttribute("aria-busy");
+      });
+    return emojiLoad;
+  };
   emojiBtn.addEventListener("click", () => {
     deps.stickers?.close();
-    emoji.toggle();
+    if (emoji) {
+      emoji.toggle();
+      return;
+    }
+    if (emojiActivationPending) return;
+    emojiActivationPending = true;
+    void ensureEmoji().then((picker) => {
+      if (!destroyed) picker?.toggle();
+    }).finally(() => {
+      emojiActivationPending = false;
+    });
   });
 
   const stickerBtn = deps.stickers
@@ -158,7 +199,7 @@ export function createComposer(deps: ComposerDeps): Composer {
   };
   const unsubscribeSticker = deps.stickers?.subscribeOpenChange(() => syncStickerBtn()) ?? null;
   stickerBtn?.addEventListener("click", () => {
-    emoji.close();
+    emoji?.close();
     deps.stickers?.toggle();
   });
 
@@ -174,7 +215,6 @@ export function createComposer(deps: ComposerDeps): Composer {
   const rowKids: HTMLElement[] = [inputWrap, sendBtn];
   const root = el("div", { class: "gc-composer" }, [
     banner,
-    emoji.root,
     ...(deps.stickers ? [deps.stickers.root] : []),
     el("div", { class: "gc-composer-row" }, rowKids),
   ]);
@@ -236,7 +276,7 @@ export function createComposer(deps: ComposerDeps): Composer {
       holdTimer = null;
       sendBtn.classList.remove("is-holding");
       holdTriggered = true;
-      emoji.close();
+      emoji?.close();
       deps.stickers?.close();
       recordHandler()?.();
     }, recordHoldMs);
@@ -351,7 +391,7 @@ export function createComposer(deps: ComposerDeps): Composer {
       deps.onSubmit({ mode: "send", text, replyToId });
     }
     flushDraft();
-    emoji.close();
+    emoji?.close();
     reset();
   };
 
@@ -363,7 +403,7 @@ export function createComposer(deps: ComposerDeps): Composer {
       if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); pickMention(mentionActive); return; }
       if (e.key === "Escape") { e.preventDefault(); closeMention(); return; }
     }
-    if (e.key === "Escape" && emoji.isOpen()) { e.preventDefault(); emoji.close(); return; }
+    if (e.key === "Escape" && emoji?.isOpen()) { e.preventDefault(); emoji?.close(); return; }
     if (e.key === "Escape" && deps.stickers?.isOpen()) { e.preventDefault(); deps.stickers.close(); return; }
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); return; }
     if (e.key === "Escape" && (mode === "edit" || replyToId !== null)) { e.preventDefault(); cancelContext(); }
@@ -452,7 +492,8 @@ export function createComposer(deps: ComposerDeps): Composer {
       clearHold();
       unsubscribeSticker?.();
       deps.stickers?.destroy();
-      emoji.destroy();
+      destroyed = true;
+      emoji?.destroy();
     },
   };
 }

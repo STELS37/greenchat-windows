@@ -27,6 +27,10 @@ export interface ChatInfoDetail {
   my_role?: string;
   my_rights?: Record<string, boolean>;
   join_mode?: string;
+  slow_mode_sec?: number;
+  history_for_new?: "visible" | "hidden";
+  noforwards?: boolean;
+  sensitive?: boolean;
 }
 
 export interface ChatInfoProfile {
@@ -63,6 +67,19 @@ export interface ChatInfoDeps {
   loadJoinRequests?(): Promise<ChatJoinRequest[]>;
   approveJoinRequest?(userId: number): Promise<unknown>;
   denyJoinRequest?(userId: number): Promise<unknown>;
+  selfId?: number;
+  saveAdmin?(userId: number, payload: { rights: Record<string, boolean>; custom_title: string | null; anonymous?: boolean }): Promise<unknown>;
+  removeAdmin?(userId: number): Promise<unknown>;
+  removeMember?(userId: number): Promise<unknown>;
+  saveGroup?(payload: {
+    title: string;
+    about: string;
+    slow_mode_sec: number;
+    join_mode: "open" | "approve";
+    history_for_new: "visible" | "hidden";
+    noforwards?: boolean;
+  }): Promise<ChatInfoDetail>;
+  onTitleChanged?(title: string): void;
   onClose?(): void;
 }
 
@@ -75,6 +92,10 @@ export interface ChatInfoOverlay {
 export function createChatInfoOverlay(deps: ChatInfoDeps): ChatInfoOverlay {
   const { i18n } = deps;
   let closed = false;
+  let detail: ChatInfoDetail | null = null;
+  let members: ChatMember[] = deps.members.map((member) => member.rights
+    ? { ...member, rights: { ...member.rights } }
+    : { ...member });
   let heroBinding: AvatarImageBinding | null = null;
 
   const closeBtn = el("button", {
@@ -90,14 +111,16 @@ export function createChatInfoOverlay(deps: ChatInfoDeps): ChatInfoOverlay {
     "data-tone": String(avatarTone(deps.title)),
   }, [initials(deps.title)]);
   const heroActions = el("div", { class: "gc-info-photo-actions" });
+  const heroName = el("h3", { class: "gc-info-name" }, [deps.title]);
   const hero = el("div", { class: "gc-info-hero" }, [
     heroAvatar,
-    el("h3", { class: "gc-info-name" }, [deps.title]),
+    heroName,
     el("p", { class: "gc-info-subtitle" }, [deps.subtitle]),
     heroActions,
   ]);
 
   const facts = el("div", { class: "gc-info-facts" });
+  const management = el("section", { class: "gc-info-management" });
   const roster = el("div", { class: "gc-info-roster" });
   const requests = el("section", { class: "gc-info-requests" });
   const status = el("p", { class: "gc-info-status", role: "status", "aria-live": "polite" });
@@ -112,7 +135,7 @@ export function createChatInfoOverlay(deps: ChatInfoDeps): ChatInfoOverlay {
       el("span", { class: "gc-info-bar-title" }, [i18n.t("chatInfo.title")]),
       closeBtn,
     ]),
-    el("div", { class: "gc-info-scroll" }, [hero, facts, roster, requests, status]),
+    el("div", { class: "gc-info-scroll" }, [hero, facts, management, roster, requests, status]),
   ]);
   const overlay = el("div", { class: "gc-overlay gc-info-overlay" }, [panel]);
   const trap = createFocusTrap(overlay, { initialFocus: closeBtn });
@@ -135,17 +158,229 @@ export function createChatInfoOverlay(deps: ChatInfoDeps): ChatInfoOverlay {
     facts.append(...rows.filter((row): row is HTMLElement => row !== null));
   };
 
+  const ADMIN_RIGHTS = [
+    "can_post",
+    "can_edit_chat",
+    "can_invite",
+    "can_pin",
+    "can_delete_others",
+    "can_manage_admins",
+  ] as const;
+  const defaultAdminRights = (): Record<string, boolean> => ({
+    can_post: true,
+    can_edit_chat: true,
+    can_invite: true,
+    can_pin: true,
+    can_delete_others: true,
+    can_manage_admins: false,
+  });
+  const rank = (role?: string): number => role === "owner" ? 2 : role === "admin" ? 1 : 0;
+  const canManageAdmins = (): boolean =>
+    detail?.my_role === "owner" || detail?.my_rights?.can_manage_admins === true;
+  const canRemoveMembers = (): boolean =>
+    detail?.my_role === "owner" || detail?.my_rights?.can_delete_others === true;
+  const option = (value: string, label: string, selected: boolean): HTMLOptionElement =>
+    el("option", { value, selected }, [label]) as HTMLOptionElement;
+
+  function renderGroupSettings(): void {
+    clear(management);
+    if (!detail || (deps.kind !== "group" && deps.kind !== "channel")) return;
+    if (!deps.saveGroup || detail.my_rights?.can_edit_chat !== true) return;
+    const title = el("input", {
+      type: "text",
+      class: "gc-input",
+      value: detail.title ?? deps.title,
+      maxlength: "128",
+      "aria-label": i18n.t("chatInfo.groupTitle"),
+    }) as HTMLInputElement;
+    const about = el("textarea", {
+      class: "gc-input gc-info-about-input",
+      maxlength: "1024",
+      "aria-label": i18n.t("chatInfo.groupAbout"),
+    }) as HTMLTextAreaElement;
+    about.value = detail.about ?? "";
+    const slow = el("select", { class: "gc-select", "aria-label": i18n.t("chatInfo.slowMode") }, [
+      ...[0, 10, 30, 60, 300, 900, 3600].map((seconds) => option(
+        String(seconds),
+        seconds === 0 ? i18n.t("chatInfo.slowOff") : i18n.t("chatInfo.slowSeconds", { seconds }),
+        (detail?.slow_mode_sec ?? 0) === seconds,
+      )),
+    ]) as HTMLSelectElement;
+    const join = el("select", { class: "gc-select", "aria-label": i18n.t("chatInfo.joinMode") }, [
+      option("open", i18n.t("chatInfo.joinOpen"), detail.join_mode !== "approve"),
+      option("approve", i18n.t("chatInfo.joinApprove"), detail.join_mode === "approve"),
+    ]) as HTMLSelectElement;
+    const history = el("select", { class: "gc-select", "aria-label": i18n.t("chatInfo.history") }, [
+      option("visible", i18n.t("chatInfo.historyVisible"), detail.history_for_new !== "hidden"),
+      option("hidden", i18n.t("chatInfo.historyHidden"), detail.history_for_new === "hidden"),
+    ]) as HTMLSelectElement;
+    const protect = el("input", { type: "checkbox", checked: detail.noforwards === true }) as HTMLInputElement;
+    const save = el("button", {
+      type: "submit",
+      class: "gc-btn gc-btn-accent",
+      "data-action": "save-group-settings",
+    }, [i18n.t("common.save")]) as HTMLButtonElement;
+    const fields: HTMLElement[] = [
+      el("label", { class: "gc-info-field" }, [el("span", {}, [i18n.t("chatInfo.groupTitle")]), title]),
+      el("label", { class: "gc-info-field" }, [el("span", {}, [i18n.t("chatInfo.groupAbout")]), about]),
+      el("label", { class: "gc-info-field" }, [el("span", {}, [i18n.t("chatInfo.slowMode")]), slow]),
+      el("label", { class: "gc-info-field" }, [el("span", {}, [i18n.t("chatInfo.joinMode")]), join]),
+      el("label", { class: "gc-info-field" }, [el("span", {}, [i18n.t("chatInfo.history")]), history]),
+    ];
+    if (detail.my_role === "owner") {
+      fields.push(el("label", { class: "gc-info-check" }, [protect, el("span", {}, [i18n.t("chatInfo.protectedContent")])]));
+    }
+    const form = el("form", { class: "gc-server-card gc-info-group-settings" }, [
+      el("h4", {}, [i18n.t("chatInfo.groupSettings")]),
+      ...fields,
+      el("div", { class: "gc-server-actions" }, [save]),
+    ]);
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (save.disabled) return;
+      save.disabled = true;
+      status.textContent = i18n.t("common.loading");
+      void deps.saveGroup!({
+        title: title.value.trim(),
+        about: about.value.trim(),
+        slow_mode_sec: Number(slow.value),
+        join_mode: join.value === "approve" ? "approve" : "open",
+        history_for_new: history.value === "hidden" ? "hidden" : "visible",
+        ...(detail?.my_role === "owner" ? { noforwards: protect.checked } : {}),
+      }).then((saved) => {
+        if (closed) return;
+        detail = { ...detail, ...saved };
+        const nextTitle = saved.title ?? title.value.trim();
+        heroName.textContent = nextTitle;
+        deps.onTitleChanged?.(nextTitle);
+        status.textContent = i18n.t("settings.saved");
+        renderGroupSettings();
+      }).catch((error) => {
+        if (!closed) status.textContent = describeError(error, i18n);
+      }).finally(() => { if (!closed) save.disabled = false; });
+    });
+    management.append(form);
+  }
+
+  function openMemberEditor(member: ChatMember): void {
+    clear(management);
+    const name = member.name?.trim() || member.username || String(member.id);
+    const rights = { ...defaultAdminRights(), ...(member.rights ?? {}) };
+    const checks = new Map<string, HTMLInputElement>();
+    const fields: HTMLElement[] = [];
+    if (deps.saveAdmin && canManageAdmins()) {
+      const customTitle = el("input", {
+        type: "text",
+        class: "gc-input",
+        maxlength: "16",
+        value: member.custom_title ?? "",
+        "aria-label": i18n.t("chatInfo.adminTitle"),
+      }) as HTMLInputElement;
+      fields.push(el("label", { class: "gc-info-field" }, [
+        el("span", {}, [i18n.t("chatInfo.adminTitle")]),
+        customTitle,
+      ]));
+      for (const key of ADMIN_RIGHTS) {
+        const check = el("input", { type: "checkbox", checked: rights[key] === true }) as HTMLInputElement;
+        checks.set(key, check);
+        fields.push(el("label", { class: "gc-info-check" }, [check, el("span", {}, [i18n.t(`chatInfo.right.${key}`)])]));
+      }
+      const anonymous = el("input", { type: "checkbox", checked: member.anonymous === true }) as HTMLInputElement;
+      if (detail?.my_role === "owner") {
+        fields.push(el("label", { class: "gc-info-check" }, [anonymous, el("span", {}, [i18n.t("chatInfo.anonymousAdmin")])]));
+      }
+      const saveAdmin = el("button", {
+        type: "button",
+        class: "gc-btn gc-btn-accent",
+        "data-action": "save-admin",
+      }, [member.role === "admin" ? i18n.t("common.save") : i18n.t("chatInfo.promoteAdmin")]) as HTMLButtonElement;
+      saveAdmin.addEventListener("click", () => {
+        if (saveAdmin.disabled) return;
+        saveAdmin.disabled = true;
+        const nextRights = Object.fromEntries(ADMIN_RIGHTS.map((key) => [key, checks.get(key)?.checked === true]));
+        void deps.saveAdmin!(member.id, {
+          rights: nextRights,
+          custom_title: customTitle.value.trim() || null,
+          ...(detail?.my_role === "owner" ? { anonymous: anonymous.checked } : {}),
+        }).then(() => {
+          if (closed) return;
+          members = members.map((item) => item.id === member.id ? {
+            ...item,
+            role: "admin",
+            rights: nextRights,
+            custom_title: customTitle.value.trim() || null,
+            ...(detail?.my_role === "owner" ? { anonymous: anonymous.checked } : {}),
+          } : item);
+          status.textContent = i18n.t("settings.saved");
+          renderGroupSettings();
+          paintRoster(members, detail?.members_count ?? members.length);
+        }).catch((error) => {
+          if (!closed) status.textContent = describeError(error, i18n);
+        }).finally(() => { if (!closed) saveAdmin.disabled = false; });
+      });
+      fields.push(el("div", { class: "gc-server-actions" }, [saveAdmin]));
+    }
+    const destructive: HTMLElement[] = [];
+    if (member.role === "admin" && deps.removeAdmin && canManageAdmins()) {
+      const demote = el("button", { type: "button", class: "gc-btn", "data-action": "remove-admin" }, [
+        i18n.t("chatInfo.demoteAdmin"),
+      ]) as HTMLButtonElement;
+      demote.addEventListener("click", () => {
+        demote.disabled = true;
+        void deps.removeAdmin!(member.id).then(() => {
+          if (closed) return;
+          members = members.map((item) => {
+            if (item.id !== member.id) return item;
+            const { rights: _rights, ...rest } = item;
+            return { ...rest, role: "member", custom_title: null, anonymous: false };
+          });
+          status.textContent = i18n.t("settings.saved");
+          renderGroupSettings();
+          paintRoster(members, detail?.members_count ?? members.length);
+        }).catch((error) => { if (!closed) status.textContent = describeError(error, i18n); })
+          .finally(() => { if (!closed) demote.disabled = false; });
+      });
+      destructive.push(demote);
+    }
+    if (deps.removeMember && canRemoveMembers() && rank(member.role) < rank(detail?.my_role)) {
+      const remove = el("button", { type: "button", class: "gc-btn gc-btn-danger", "data-action": "remove-member" }, [
+        i18n.t("chatInfo.removeMember"),
+      ]) as HTMLButtonElement;
+      remove.addEventListener("click", () => {
+        remove.disabled = true;
+        void deps.removeMember!(member.id).then(() => {
+          if (closed) return;
+          members = members.filter((item) => item.id !== member.id);
+          status.textContent = i18n.t("chatInfo.memberRemoved");
+          renderGroupSettings();
+          paintRoster(members, members.length);
+        }).catch((error) => { if (!closed) status.textContent = describeError(error, i18n); })
+          .finally(() => { if (!closed) remove.disabled = false; });
+      });
+      destructive.push(remove);
+    }
+    const cancel = el("button", { type: "button", class: "gc-btn", "data-action": "cancel-member-edit" }, [
+      i18n.t("common.cancel"),
+    ]);
+    cancel.addEventListener("click", () => renderGroupSettings());
+    management.append(el("section", { class: "gc-server-card gc-info-member-editor" }, [
+      el("h4", {}, [i18n.t("chatInfo.manageMember", { name })]),
+      ...fields,
+      ...(destructive.length ? [el("div", { class: "gc-server-actions gc-info-danger-actions" }, destructive)] : []),
+      cancel,
+    ]));
+  }
+
   const memberRow = (member: ChatMember): HTMLElement => {
-    const name = member.name?.trim() || member.username;
+    const name = member.name?.trim() || member.username || String(member.id);
     const avatar = el("span", {
       class: "gc-info-member-avatar gc-avatar",
       "aria-hidden": "true",
       "data-tone": String(avatarTone(name)),
     }, [initials(name)]);
-    const avatarFileId = (member as ChatMember & { avatar_file_id?: number | null }).avatar_file_id ?? null;
-    if (deps.photoApi) void bindAvatarImage(avatar, deps.photoApi, avatarFileId, name);
-    const row = el(deps.onOpenMember ? "button" : "div", {
-      class: "gc-info-member",
+    if (deps.photoApi) void bindAvatarImage(avatar, deps.photoApi, member.avatar_file_id ?? null, name);
+    const open = el(deps.onOpenMember ? "button" : "span", {
+      class: "gc-info-member-open",
       ...(deps.onOpenMember ? { type: "button" } : {}),
     }, [
       avatar,
@@ -153,12 +388,29 @@ export function createChatInfoOverlay(deps: ChatInfoDeps): ChatInfoOverlay {
         el("span", { class: "gc-info-member-name" }, [name]),
         el("span", { class: "gc-info-member-handle" }, [member.username ? `@${member.username}` : ""]),
       ]),
-      ...(member.role && member.role !== "member"
-        ? [el("span", { class: "gc-info-member-role" }, [i18n.t(`chatInfo.role.${member.role}`)])]
-        : []),
     ]);
-    if (deps.onOpenMember) row.addEventListener("click", () => { close(); deps.onOpenMember?.(member.id); });
-    return row;
+    if (deps.onOpenMember) open.addEventListener("click", () => { close(); deps.onOpenMember?.(member.id); });
+    const roleLabel = member.custom_title?.trim()
+      || (member.role && member.role !== "member" ? i18n.t(`chatInfo.role.${member.role}`) : "");
+    const mayEditAdmin = member.role !== "owner" && member.id !== deps.selfId && canManageAdmins();
+    const mayRemove = member.role !== "owner"
+      && member.id !== deps.selfId
+      && canRemoveMembers()
+      && rank(member.role) < rank(detail?.my_role);
+    const manage = mayEditAdmin || mayRemove
+      ? el("button", {
+          type: "button",
+          class: "gc-btn gc-info-member-manage",
+          "data-action": "manage-member",
+          "data-user-id": String(member.id),
+        }, [i18n.t("chatInfo.manage")])
+      : null;
+    manage?.addEventListener("click", () => openMemberEditor(member));
+    return el("div", { class: "gc-info-member", role: "listitem" }, [
+      open,
+      ...(roleLabel ? [el("span", { class: "gc-info-member-role" }, [roleLabel])] : []),
+      ...(manage ? [manage] : []),
+    ]);
   };
 
   const paintRoster = (list: ChatMember[], total: number | null): void => {
@@ -291,18 +543,19 @@ export function createChatInfoOverlay(deps: ChatInfoDeps): ChatInfoOverlay {
     }
   };
 
-  paintRoster(deps.members, null);
+  paintRoster(members, null);
 
   void (async () => {
     try {
-      const detail = await deps.loadChat();
+      const loaded = await deps.loadChat();
       if (closed) return;
+      detail = loaded;
       clear(facts);
       shownValues.clear();
       const rows: Array<HTMLElement | null> = [];
-      const about = (detail.about ?? "").trim();
+      const about = (loaded.about ?? "").trim();
       if (about) rows.push(fact(i18n.t("chatInfo.about"), about, "info"));
-      const handle = (detail.username ?? "").trim();
+      const handle = (loaded.username ?? "").trim();
       const isDialog = deps.peerId !== null;
       if (handle) rows.push(fact(
         i18n.t(isDialog ? "chatInfo.username" : "chatInfo.link"),
@@ -310,11 +563,12 @@ export function createChatInfoOverlay(deps: ChatInfoDeps): ChatInfoOverlay {
         isDialog ? "user" : "globe",
       ));
       appendFacts(rows);
-      if (typeof detail.members_count === "number") paintRoster(deps.members, detail.members_count);
-      if (!isDialog) paintHeroPhoto(detail.photo_file_id ?? null);
-      paintPhotoEditor(detail);
-      const staff = detail.my_role === "owner" || detail.my_role === "admin";
-      if (detail.join_mode === "approve" && staff && detail.my_rights?.can_invite !== false) {
+      paintRoster(members, typeof loaded.members_count === "number" ? loaded.members_count : members.length);
+      if (!isDialog) paintHeroPhoto(loaded.photo_file_id ?? null);
+      paintPhotoEditor(loaded);
+      renderGroupSettings();
+      const staff = loaded.my_role === "owner" || loaded.my_role === "admin";
+      if (loaded.join_mode === "approve" && staff && loaded.my_rights?.can_invite !== false) {
         void loadAndPaintRequests();
       }
     } catch {

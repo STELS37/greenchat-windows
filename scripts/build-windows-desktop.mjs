@@ -145,6 +145,46 @@ export function windowsArch(value) {
   fail(`unsupported Windows architecture ${value}`);
 }
 
+// TDLib generates source files with helper executables. An ARM64 helper cannot run on an x64
+// GitHub runner, so ARM64 uses TDLib's native prepare_cross_compiling stage before the target build.
+export function tdlibBuildPlan(arch, { sourceRoot, binaryRoot, toolchain }) {
+  const targetConfigure = [
+    "-S", sourceRoot,
+    "-B", binaryRoot,
+    "-A", arch.cmake,
+    "-DCMAKE_BUILD_TYPE=Release",
+    `-DCMAKE_TOOLCHAIN_FILE=${toolchain}`,
+    `-DVCPKG_TARGET_TRIPLET=${arch.vcpkg}`,
+    "-DTD_ENABLE_JNI=OFF",
+    "-DTD_ENABLE_DOTNET=OFF",
+    "-DTD_ENABLE_LTO=ON",
+  ];
+  if (arch.package === "arm64") {
+    targetConfigure.push("-DCMAKE_SYSTEM_NAME=Windows", "-DCMAKE_SYSTEM_PROCESSOR=ARM64");
+  }
+  const nativeRoot = join(dirname(binaryRoot), "td-build-native-x64");
+  return {
+    native: arch.package === "arm64" ? {
+      binaryRoot: nativeRoot,
+      configure: [
+        "-S", sourceRoot,
+        "-B", nativeRoot,
+        "-A", "x64",
+        "-DCMAKE_BUILD_TYPE=Release",
+        "-DTD_GENERATE_SOURCE_FILES=ON",
+        "-DTD_ENABLE_JNI=OFF",
+        "-DTD_ENABLE_DOTNET=OFF",
+        "-DTD_ENABLE_LTO=OFF",
+      ],
+      build: ["--build", nativeRoot, "--config", "Release", "--target", "prepare_cross_compiling"],
+    } : null,
+    target: {
+      configure: targetConfigure,
+      build: ["--build", binaryRoot, "--config", "Release", "--target", "tdjson"],
+    },
+  };
+}
+
 export function artifactNames(version, arch) {
   return {
     setup: `GreenChat-${version}-windows-${arch.package}-setup.exe`,
@@ -538,20 +578,23 @@ function ensurePinnedTdlib(arch, skipTdlib) {
   const vcpkg = join(vcpkgRoot, "vcpkg.exe");
   const toolchain = join(vcpkgRoot, "scripts/buildsystems/vcpkg.cmake");
   if (!existsSync(vcpkg) || !existsSync(toolchain)) fail(`vcpkg is unavailable at ${vcpkgRoot}`);
-  run(vcpkg, ["install", `openssl:${arch.vcpkg}`, `zlib:${arch.vcpkg}`, "--clean-after-build"]);
+  const nativeEnv = { VCPKG_ROOT: vcpkgRoot };
+  run(vcpkg, ["install", `openssl:${arch.vcpkg}`, `zlib:${arch.vcpkg}`, "--clean-after-build"], { env: nativeEnv });
+
+  const buildJobs = process.env.GC_BUILD_JOBS || "2";
+  const plan = tdlibBuildPlan(arch, { sourceRoot, binaryRoot, toolchain });
+  if (plan.native) {
+    rmSync(plan.native.binaryRoot, { recursive: true, force: true });
+    run("cmake.exe", plan.native.configure, { env: nativeEnv });
+    run("cmake.exe", [...plan.native.build, "--parallel", buildJobs], { env: nativeEnv });
+  }
+
+  // Recreate only the target build tree so a failed or previous non-cross ARM64 CMake cache cannot
+  // silently rebuild host tools for the target architecture. Source and dependency caches remain.
+  rmSync(binaryRoot, { recursive: true, force: true });
   mkdirSync(binaryRoot, { recursive: true });
-  run("cmake.exe", [
-    "-S", sourceRoot,
-    "-B", binaryRoot,
-    "-A", arch.cmake,
-    "-DCMAKE_BUILD_TYPE=Release",
-    `-DCMAKE_TOOLCHAIN_FILE=${toolchain}`,
-    `-DVCPKG_TARGET_TRIPLET=${arch.vcpkg}`,
-    "-DTD_ENABLE_JNI=OFF",
-    "-DTD_ENABLE_DOTNET=OFF",
-    "-DTD_ENABLE_LTO=ON",
-  ]);
-  run("cmake.exe", ["--build", binaryRoot, "--config", "Release", "--target", "tdjson", "--parallel", process.env.GC_BUILD_JOBS || "2"]);
+  run("cmake.exe", plan.target.configure, { env: nativeEnv });
+  run("cmake.exe", [...plan.target.build, "--parallel", buildJobs], { env: nativeEnv });
   const dll = newest(walk(binaryRoot).filter((path) => basename(path).toLowerCase() === "tdjson.dll"));
   if (!dll || statSync(dll).size < 1024 * 1024) fail("TDLib build produced no usable tdjson.dll");
   if (peMachine(readFileSync(dll)) !== arch.peMachine) fail("TDLib DLL architecture does not match the release target");

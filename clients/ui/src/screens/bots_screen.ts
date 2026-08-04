@@ -9,6 +9,7 @@ import type { ApiLike } from "./api.ts";
 import { describeError, isNetworkError } from "./api.ts";
 import { failureLine, failureState } from "./state_view.ts";
 import { consumeBotCreateIntent } from "./bot_center_handoff.ts";
+import { bindAvatarImage, type AvatarImageBinding } from "./avatar_media.ts";
 
 export interface BotCommand {
   command: string;
@@ -191,6 +192,19 @@ export function createBotsScreen(deps: BotsScreenDeps): { root: HTMLElement; des
   let analytics: BotAnalyticsView | null = null;
   let analyticsLoading = false;
   let analyticsError = "";
+  let avatarBindings: AvatarImageBinding[] = [];
+  const resetAvatarBindings = (): void => {
+    for (const binding of avatarBindings) binding.destroy();
+    avatarBindings = [];
+  };
+  const botAvatar = (bot: OwnedBotView, large = false): HTMLElement => {
+    const label = bot.name.trim() || `@${bot.username}`;
+    const avatar = el("span", { class: `gc-bot-avatar${large ? " gc-bot-avatar-large" : ""}` }, [
+      label.slice(0, 1).toUpperCase() || "B",
+    ]);
+    avatarBindings.push(bindAvatarImage(avatar, api, bot.avatar_file_id, label));
+    return avatar;
+  };
   let busy = false;
   let loading = true;
   let error = "";
@@ -739,7 +753,7 @@ export function createBotsScreen(deps: BotsScreenDeps): { root: HTMLElement; des
     const list = el("div", { class: "gc-bot-list" });
     for (const bot of bots) {
       const button = el("button", { type: "button", class: "gc-bot-row", disabled: busy }, [
-        el("span", { class: "gc-bot-avatar" }, [bot.name.trim().slice(0, 1).toUpperCase() || "B"]),
+        botAvatar(bot),
         el("span", { class: "gc-bot-row-main" }, [
           el("strong", {}, [bot.name || `@${bot.username}`]),
           el("span", { class: "gc-bot-handle" }, [`@${bot.username}`]),
@@ -834,7 +848,7 @@ export function createBotsScreen(deps: BotsScreenDeps): { root: HTMLElement; des
     );
 
     const overview = el("section", { class: "gc-bot-card gc-bot-overview" }, [
-      el("span", { class: "gc-bot-avatar gc-bot-avatar-large" }, [bot.name.trim().slice(0, 1).toUpperCase() || "B"]),
+      botAvatar(bot, true),
       el("div", { class: "gc-bot-overview-copy" }, [
         el("h2", {}, [bot.name || `@${bot.username}`]),
         el("p", { class: "gc-bot-handle" }, [`@${bot.username}`]),
@@ -1121,6 +1135,7 @@ export function createBotsScreen(deps: BotsScreenDeps): { root: HTMLElement; des
 
   function render(): void {
     if (!alive) return;
+    resetAvatarBindings();
     clear(root);
     if (mode === "create") renderCreate();
     else if (mode === "detail") renderDetail();
@@ -1139,6 +1154,7 @@ export function createBotsScreen(deps: BotsScreenDeps): { root: HTMLElement; des
       oneTimeToken = null;
       analytics = null;
       analyticsError = "";
+      resetAvatarBindings();
       clear(root);
     },
   };

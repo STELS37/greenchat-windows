@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "release_id": "green-chat-1.0.0-beta.6-android.1000027-rev.3",
+  "release_id": "green-chat-1.0.0-beta.6-android.1000027-rev.4",
   "channel": "beta",
   "current_version": "1.0.0-beta.6",
-  "published_at": "2026-08-04T16:43:23Z",
-  "notes": "BETA RELEASE: единая Android-сборка versionCode 1000027 из проверенного снимка 428e4be7, подписанная каноническим сертификатом GreenChat. Web/PWA и прямой APK опубликованы и проверены: APK sha256 5dca8bb19102f936328c1341a79a2f1fe25489c055a524f14561f77ee896b655, 55337158 байт. AAB sha256 71add38206a466499d7fcd1ae5dce03f987545a87ee6ba923ab87179d390becf, 28424716 байт принят Google Play, но edits.commit заблокирован обязательной декларацией Foreground Service mediaProjection; код 1000027 поэтому считается израсходованным, следующий релиз резервирует 1000028.",
+  "published_at": "2026-08-04T17:42:43Z",
+  "notes": "BETA RELEASE rev.4: обновлены Web/PWA и клиентский интерфейс GreenChat, включая устранение дублирующей кнопки показа пароля. Android APK versionCode 1000027 и его проверенные артефакты остаются неизменными; следующий нативный Android-релиз использует зарезервированный versionCode 1000028.",
   "platforms": {
     "web": {
       "status": "available",
@@ -71,5 +71,5 @@
       "version": "1.0.0-beta.6"
     }
   },
-  "catalog_revision": 3
+  "catalog_revision": 4
 }

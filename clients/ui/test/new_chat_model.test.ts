@@ -40,6 +40,11 @@ test("savedRowVisible: the pinned self row stops contradicting a query it cannot
   assert.equal(savedRowVisible("@saved", "Saved Messages"), true, "a leading @ is noise, the label still matches");
 });
 
+test("userRows: carries a real avatar file id into every people picker", () => {
+  const rows = userRows([user({ avatar_file_id: 88 })], 1);
+  assert.equal(rows[0]?.avatarFileId, 88);
+});
+
 test("userRows: maps found users and drops the viewer", () => {
   const rows = userRows([user({ id: 7 }), user({ id: 2, name: "Ann", username: "ann" }), user({ id: 3, name: "", username: "bob" })], 7);
   assert.equal(rows.length, 2, "the viewer (id 7) is filtered out — they already have the self row");

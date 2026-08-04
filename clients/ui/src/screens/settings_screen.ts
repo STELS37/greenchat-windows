@@ -36,6 +36,7 @@ import { failureState, skeletonLine } from "./state_view.ts";
 import { createDevicesScreen } from "./devices_screen.ts";
 import type { SupportHelpPort, SupportHelpView } from "./support_help.ts";
 import type { SafetyScreen, SafetyScreenDeps } from "./safety_screen.ts";
+import { checkManualUpdate, type ManualUpdateResult } from "../manual_update_check.ts";
 
 import {
   createTelegramSettings,
@@ -96,7 +97,7 @@ export interface DesktopSystemPort {
 // Manual update check action. Native shells provide the implementation; web/PWA can omit it because
 // service-worker updates are handled automatically.
 export interface UpdateCheckPort {
-  check(): Promise<void>;
+  check(): Promise<ManualUpdateResult>;
 }
 
 // One tile in the «Ещё» service hub. The shell supplies the list because only it knows which optional
@@ -852,13 +853,18 @@ export function createSettingsScreen(deps: SettingsScreenDeps): {
         button.setAttribute("disabled", "");
         status.textContent = i18n.t("settings.checkingUpdates");
         try {
-          if (updateCheckPort) {
-            await updateCheckPort.check();
-          } else {
-            // Web/PWA fallback: reload the service worker update check.
-            window.location.reload();
-          }
-          if (isCurrent(generation)) status.textContent = i18n.t("settings.updateCheckDone");
+          // Never reload here. A native WebView reload used to destroy the current authenticated view
+          // and looked exactly like an account logout. The default checker asks the native manifest or
+          // the existing PWA service worker and returns a real verdict without touching the session.
+          const result = updateCheckPort
+            ? await updateCheckPort.check()
+            : await checkManualUpdate();
+          if (!isCurrent(generation)) return;
+          status.textContent = result.state === "latest"
+            ? i18n.t("settings.updateLatest")
+            : result.state === "available"
+              ? i18n.t("settings.updateAvailable", { version: result.version ?? "" })
+              : i18n.t("settings.updateCheckUnavailable");
         } catch (err) {
           if (isCurrent(generation)) status.textContent = describeError(err, i18n);
         } finally {

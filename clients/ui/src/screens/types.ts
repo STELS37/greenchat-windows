@@ -227,4 +227,8 @@ export interface ChatMember {
   is_bot?: boolean;
   avatar_file_id?: number | null;
   role?: string;
+  custom_title?: string | null;
+  anonymous?: boolean;
+  rights?: Record<string, boolean>;
+  restricted_until?: number | null;
 }

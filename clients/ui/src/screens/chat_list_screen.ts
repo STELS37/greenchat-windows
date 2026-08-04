@@ -716,6 +716,7 @@ export function createChatListScreen(deps: ChatListDeps): { root: HTMLElement; d
         i18n,
         self,
         search: (q) => api.searchGlobal!(q),
+        avatarApi: api,
         listContacts: async () => {
           try {
             return mergeParticipantSuggestions(await loadContacts(api), entries, self.id);

@@ -19,7 +19,7 @@ import type { ComposerSubmit } from "./composer.ts";
 import { takePendingShare } from "./share.ts";
 import { renderAttachment, renderAlbumGroup, cleanupMedia, openViewer } from "./media.ts";
 import type { MediaPort, MediaEnv, AttachmentDeps } from "./media.ts";
-import { createChatInfoOverlay } from "./chat_info.ts";
+import { createChatInfoOverlay, type ChatInfoDetail } from "./chat_info.ts";
 import { bindAvatarImage, type AvatarImageBinding } from "./avatar_media.ts";
 import { createAttachTray } from "./attach_tray.ts";
 import type { AttachTray } from "./attach_tray.ts";
@@ -447,17 +447,6 @@ export function createFeedScreen(deps: FeedDeps): { root: HTMLElement; focus(mes
   // rather than as a second icon competing with search.
   const overflowItems = (): MessageMenuItem[] => {
     const items: MessageMenuItem[] = [];
-    // V113: the video call folded out of the bar leads the menu — it is the only entry here that is
-    // an action ON the person named above, and it is offered only while a call is actually possible,
-    // exactly as its icon was (V75). A group or Saved Messages sees no dead item.
-    if (videoCallFolded() && callable()) {
-      items.push({
-        id: "chat-video-call",
-        label: i18n.t("call.startVideo"),
-        glyph: "video",
-        run: () => startCall(true),
-      });
-    }
     // V105: on a phone the search icon is not in the bar — it is here, because it is the only
     // one of these entries a reader reaches for mid-conversation.
     if (searchFolded()) {
@@ -512,29 +501,11 @@ export function createFeedScreen(deps: FeedDeps): { root: HTMLElement; focus(mes
     return headerViewport?.matches === true;
   };
   const searchFolded = (): boolean => hasOverflow && barIsNarrow();
-  // V113 — one fold was not enough. V105 was measured with FOUR actions in the bar; by the time the
-  // signed APK was measured on a 320 dp phone the call pair had joined them, so the row was
-  // 3 x 44 = 132 px and the identity got 72 px of a 320 px bar. Probed through the device WebView
-  // (redroid 15, `wm density 540`, route #/chat/17, peer «Артём Волков», 2026-07-31):
-  //
-  //   font_scale  actions   title box / needed   painted
-  //   1.0         3 x 44     72 / 111            «Артём В»
-  //   1.0         2 x 44    111 / 111            «Артём Волков»      <- video folded
-  //   1.3         3 x 44     72 / 145            «Артём »
-  //   1.3         2 x 44    116 / 145            «Артём Вол»         <- fold alone is not enough
-  //   2.0         3 x 44     72 / 223            «Арт»
-  //
-  // Video is the one to fold: the audio call is the action a 1:1 dialog exists for, it is the one
-  // Android's own dialer surfaces first, and — unlike search — the folded item is not a mode of this
-  // screen but the same `startCall`, so nothing about it changes inside the menu. The remaining
-  // shortfall at an enlarged system font is not a width problem and is not solved by folding a third
-  // icon (the bar would stop offering a call at all); it is answered in CSS by letting the name wrap
-  // (styles.css V113), which is what the same stylesheet already does for screen titles at V109.
-  const videoCallFolded = (): boolean => searchFolded();
+  // V205: audio and video calls are both primary actions in a 1:1 dialog. The video button must stay
+  // beside the audio button on phones; only search may fold into overflow when the bar is narrow.
   const syncSearchAffordance = (): void => { searchBtn.hidden = searchFolded(); };
-  // Rotation and window resizing cross the breakpoint under a live screen (V93 fixed the tab bar
-  // vanishing on rotation for the same reason), so the bar re-decides instead of freezing at the
-  // width it was born on. The listener is dropped in destroy().
+  // Rotation and window resizing cross the breakpoint under a live screen, so the bar re-decides
+  // instead of freezing at the width it was born on. The listener is dropped in destroy().
   // V113b: the observer below fires on every size change of the bar, including the one the fold
   // itself causes, so the work is done only when the ANSWER changed. Without this the pair
   // "hide an icon -> the row resizes -> re-decide" would run on every frame of a rotation.
@@ -665,9 +636,7 @@ export function createFeedScreen(deps: FeedDeps): { root: HTMLElement; focus(mes
     const on = callable();
     for (const btn of [callBtn, videoCallBtn]) {
       if (!btn) continue;
-      // V113: on a phone the video icon is not in the bar — it is the first item of the header menu.
-      // It is hidden for the same reason the search icon is, never because the call is impossible.
-      if (on && !(btn === videoCallBtn && videoCallFolded())) btn.removeAttribute("hidden");
+      if (on) btn.removeAttribute("hidden");
       else btn.setAttribute("hidden", "");
     }
     if (groupCallBtn) {
@@ -894,6 +863,7 @@ export function createFeedScreen(deps: FeedDeps): { root: HTMLElement; focus(mes
         kind: chatKind,
         peerId,
         members,
+        selfId: self.id,
         loadChat: () => api.get(`/v1/chats/${chatId}`),
         loadUser: (userId: number) => api.get(`/v1/users/${userId}`),
         photoApi: api,
@@ -902,6 +872,30 @@ export function createFeedScreen(deps: FeedDeps): { root: HTMLElement; focus(mes
         loadJoinRequests: () => api.get(`/v1/chats/${chatId}/join_requests`),
         approveJoinRequest: (userId: number) => api.post(`/v1/chats/${chatId}/join_requests/${userId}/approve`, {}),
         denyJoinRequest: (userId: number) => api.post(`/v1/chats/${chatId}/join_requests/${userId}/deny`, {}),
+        saveAdmin: async (userId, payload) => {
+          const saved = await api.post(`/v1/chats/${chatId}/admins`, { user_id: userId, ...payload });
+          members = members.map((member) => member.id === userId
+            ? { ...member, role: "admin", rights: { ...payload.rights }, custom_title: payload.custom_title, ...(payload.anonymous !== undefined ? { anonymous: payload.anonymous } : {}) }
+            : member);
+          return saved;
+        },
+        removeAdmin: async (userId) => {
+          const removed = await api.delete(`/v1/chats/${chatId}/admins/${userId}`);
+          members = members.map((member) => {
+            if (member.id !== userId) return member;
+            const { rights: _rights, ...rest } = member;
+            return { ...rest, role: "member", custom_title: null, anonymous: false };
+          });
+          return removed;
+        },
+        removeMember: async (userId) => {
+          const removed = await api.delete(`/v1/chats/${chatId}/members/${userId}`);
+          members = members.filter((member) => member.id !== userId);
+          renderSubtitle();
+          return removed;
+        },
+        saveGroup: (payload) => api.patch<ChatInfoDetail>(`/v1/chats/${chatId}`, payload),
+        onTitleChanged: (title) => { titleEl.textContent = title; },
         onPhotoChanged: (fileId: number) => { void headerAvatarBinding?.set(fileId); },
         onClose: release,
       });

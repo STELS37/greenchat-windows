@@ -30,6 +30,7 @@ import type { ServerPort } from "./server_screen.ts";
 import { createImportScreen } from "./import_screen.ts";
 import type { ImportPorts, ImportSource } from "./import_model.ts";
 import { createFeedScreen } from "./feed_screen.ts";
+import type { FeedScrollStabilityController } from "./feed_scroll_stability.ts";
 import { createCallsScreen } from "./calls_screen.ts";
 import { createContactsScreen } from "./contacts_screen.ts";
 import { createFinanceScreen, type FinanceView } from "./finance_screen.ts";
@@ -1076,7 +1077,26 @@ export function createApp(deps: AppDeps): App {
               ? { onOpenConference: (groupChatId: number, video: boolean) => deps.conferences?.open(groupChatId, video) }
               : {}),
           });
-          return wrapInShell(feed, "chats", "detail", makeChatList(chatId));
+          // Android WebView and mobile browsers may scroll the focused feed without a reader gesture.
+          // Load that platform guard only for an opened conversation, keeping the launch bundle lean.
+          let stability: FeedScrollStabilityController | null = null;
+          let feedDestroyed = false;
+          void import("./feed_scroll_stability.ts").then(({ installFeedScrollStability }) => {
+            if (!feedDestroyed) stability = installFeedScrollStability(feed.root);
+          }, () => {});
+          const stableFeed: Mounted = {
+            root: feed.root,
+            focus(messageId) {
+              const navigate = (): void => feed.focus(messageId);
+              if (stability) stability.allowNavigation(navigate); else navigate();
+            },
+            destroy() {
+              feedDestroyed = true;
+              stability?.destroy();
+              feed.destroy();
+            },
+          };
+          return wrapInShell(stableFeed, "chats", "detail", makeChatList(chatId));
         });
         return;
       }

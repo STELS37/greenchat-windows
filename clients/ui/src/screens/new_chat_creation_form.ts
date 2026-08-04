@@ -4,7 +4,7 @@
 import type { I18n } from "../i18n.ts";
 import { el, clear } from "../dom.ts";
 import { describeError } from "./api.ts";
-import type { DialogChat, GlobalSearchResult } from "./api.ts";
+import type { ApiLike, DialogChat, GlobalSearchResult } from "./api.ts";
 import type { SelfRef } from "./chat_model.ts";
 import {
   SearchController,
@@ -15,6 +15,7 @@ import {
 import { serviceAccountLabel } from "./service_account.ts";
 import { icon } from "../icons.ts";
 import { avatarTone, initials } from "./message_menu.ts";
+import { bindAvatarImage, type AvatarImageBinding } from "./avatar_media.ts";
 import { contactSubtitle, contactTitle, type ContactRow } from "./contacts_model.ts";
 import type { NewChatStringKey } from "./new_chat_strings.ts";
 
@@ -49,6 +50,7 @@ export interface NewChatCreationFormDeps {
   self: SelfRef;
   text: Text;
   search(q: string): Promise<GlobalSearchResult>;
+  avatarApi?: Pick<ApiLike, "get" | "resolveUrl">;
   listContacts?(): Promise<ContactRow[]>;
   createGroup?(input: NewGroupInput): Promise<DialogChat>;
   createChannel?(input: NewChannelInput): Promise<DialogChat>;
@@ -73,6 +75,11 @@ export function createNewChatCreationForm(
   deps: NewChatCreationFormDeps,
 ): NewChatCreationForm {
   const { i18n, self, text } = deps;
+  let avatarBindings: AvatarImageBinding[] = [];
+  const resetAvatarBindings = (): void => {
+    for (const binding of avatarBindings) binding.destroy();
+    avatarBindings = [];
+  };
 
   const note = (node: HTMLElement, value: string): void => {
     node.textContent = value;
@@ -89,11 +96,13 @@ export function createNewChatCreationForm(
 
   const avatarNode = (row: DirectoryRow): HTMLElement => {
     const seed = row.avatarSeed ?? row.title;
-    return el("div", {
+    const avatar = el("div", {
       class: "gc-avatar",
       "data-tone": String(avatarTone(seed)),
       "aria-hidden": "true",
     }, [initials(seed)]);
+    if (deps.avatarApi) avatarBindings.push(bindAvatarImage(avatar, deps.avatarApi, row.avatarFileId ?? null, row.title));
+    return avatar;
   };
 
   const personCopy = (row: DirectoryRow): HTMLElement => {
@@ -135,6 +144,7 @@ export function createNewChatCreationForm(
         title: contactTitle(row),
         subtitle: contactSubtitle(row),
         avatarSeed: row.name.trim() || row.username || contactTitle(row),
+        ...(typeof row.avatar_file_id === "number" && row.avatar_file_id > 0 ? { avatarFileId: row.avatar_file_id } : {}),
       }));
 
     const visibleRows = (): DirectoryRow[] => {
@@ -189,6 +199,7 @@ export function createNewChatCreationForm(
         selectedBar.append(chip);
       }
 
+      resetAvatarBindings();
       clear(results);
       const rows = visibleRows();
       for (const row of rows) paintRow(row);
@@ -416,6 +427,6 @@ export function createNewChatCreationForm(
 
   return {
     root: form,
-    cleanup() { memberPicker.cancel(); },
+    cleanup() { memberPicker.cancel(); resetAvatarBindings(); },
   };
 }

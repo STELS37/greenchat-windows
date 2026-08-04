@@ -17,6 +17,7 @@ import { failureLine, failureState, skeletonList, stateView } from "./state_view
 import type { ChatEntry } from "./types.ts";
 import type { EventFeed } from "./feed_screen.ts";
 import { avatarTone, initials } from "./message_menu.ts";
+import { bindAvatarImage, type AvatarImageBinding } from "./avatar_media.ts";
 import { createWidthFitter } from "../fit_width.ts";
 import {
   type CallHistoryItem,
@@ -81,6 +82,24 @@ export function createCallsScreen(deps: CallsScreenDeps): { root: HTMLElement; d
   let historyFailure: { error: unknown } | null = null;
   // Which slice of the log is on screen. Lives on the closure so appending a page keeps the choice.
   let logFilter: "all" | "missed" = "all";
+  let chatAvatarById = new Map<number, number | null>();
+  let logAvatarBindings: AvatarImageBinding[] = [];
+  let peopleAvatarBindings: AvatarImageBinding[] = [];
+  const resetBindings = (bindings: AvatarImageBinding[]): void => {
+    for (const binding of bindings) binding.destroy();
+    bindings.length = 0;
+  };
+  const callAvatar = (
+    title: string,
+    fileId: number | null | undefined,
+    bindings: AvatarImageBinding[],
+  ): HTMLElement => {
+    const avatar = el("span", { class: "gc-avatar gc-call-avatar", "data-tone": String(avatarTone(title)), "aria-hidden": true }, [
+      initials(title),
+    ]);
+    bindings.push(bindAvatarImage(avatar, api, fileId ?? null, title));
+    return avatar;
+  };
 
   const back = el("button", { type: "button", class: "gc-icon-btn", title: i18n.t("common.back"), "aria-label": i18n.t("common.back") }, [icon("back")]);
   back.addEventListener("click", deps.onBack);
@@ -131,7 +150,7 @@ export function createCallsScreen(deps: CallsScreenDeps): { root: HTMLElement; d
         "aria-label": i18n.t("calls.logOpenChat", { name: line.title }),
       },
       [
-        el("span", { class: "gc-avatar gc-call-avatar", "data-tone": String(avatarTone(line.title)), "aria-hidden": true }, [initials(line.title)]),
+        callAvatar(line.title, chatAvatarById.get(item.chat_id), logAvatarBindings),
         el("span", { class: "gc-call-log-copy" }, [
           el("strong", {}, [line.title]),
           el("span", { class: "gc-call-log-meta" }, meta),
@@ -198,6 +217,7 @@ export function createCallsScreen(deps: CallsScreenDeps): { root: HTMLElement; d
   };
 
   const renderLog = (): HTMLElement => {
+    resetBindings(logAvatarBindings);
     const missed = missedCount(history);
     const section = el("section", { class: "gc-calls-section gc-call-log" }, [
       el("div", { class: "gc-tabs gc-call-log-tabs", role: "tablist" }, [
@@ -244,6 +264,7 @@ export function createCallsScreen(deps: CallsScreenDeps): { root: HTMLElement; d
   };
 
   const renderPeople = (chats: ChatEntry[]): HTMLElement => {
+    resetBindings(peopleAvatarBindings);
     const dialogList = el("div", { class: "gc-call-dialog-list" });
     // Whom can I call: every one-to-one chat I actually have. The handle is a subtitle, not an entry
     // ticket — a peer without one (or a deleted account) still gets a row.
@@ -252,7 +273,7 @@ export function createCallsScreen(deps: CallsScreenDeps): { root: HTMLElement; d
       const subtitle = chat.username ? `@${chat.username}` : i18n.t("calls.recentActivity");
       const open = el("button", { type: "button", class: "gc-call-dialog" }, [
         // Same seed as every other avatar in the client (see avatar_tone_consistency.test.ts).
-        el("span", { class: "gc-avatar gc-call-avatar", "data-tone": String(avatarTone(chat.title)), "aria-hidden": true }, [initials(chat.title)]),
+        callAvatar(chat.title, chat.photo_file_id, peopleAvatarBindings),
         el("span", { class: "gc-call-dialog-copy" }, [el("strong", {}, [chat.title]), el("span", {}, [subtitle])]),
         // The action of this row is "open the conversation" (that is where the call buttons live), so
         // the affordance says exactly that. It used to draw a phone, which promised a call the row
@@ -316,6 +337,9 @@ export function createCallsScreen(deps: CallsScreenDeps): { root: HTMLElement; d
       if (disposed || epoch !== loadEpoch) return;
       const historyResult = await historyRequest;
       if (disposed || epoch !== loadEpoch) return;
+      chatAvatarById = new Map(chats.map((chat) => [chat.id, chat.photo_file_id]));
+      resetBindings(logAvatarBindings);
+      resetBindings(peopleAvatarBindings);
       clear(body);
       const turnReady = config.ice_servers.some((server) => {
         const urls = Array.isArray(server.urls) ? server.urls : [server.urls];
@@ -406,6 +430,8 @@ export function createCallsScreen(deps: CallsScreenDeps): { root: HTMLElement; d
       disposed = true;
       stopEvents?.();
       conferenceHub?.destroy();
+      resetBindings(logAvatarBindings);
+      resetBindings(peopleAvatarBindings);
       tabFitter.destroy();
     },
   };

@@ -1,31 +1,6 @@
-// clients/ui/test/visual_chat_header_fold_v113.test.ts — V113: on a 320 dp phone the conversation
-// bar named the person you were talking to as «Артём В», and the input pill invited you to
-// «Написать» — both at the DEFAULT system font, i.e. with no accessibility setting touched.
-//
-// Evidence (signed direct APK app.greenchat on redroid Android 15, `wm density 540` = 320 dp,
-// ru-RU, CDP against the device WebView, route #/chat/17, peer «Артём Волков», 2026-07-31; the
-// "painted" column is rebuilt character by character from Range rects, not guessed):
-//
-//   HEADER            actions   title box / needed    painted
-//   font_scale 1.0    3 x 44     72 / 111             «Артём В»
-//   font_scale 1.0    2 x 44    111 / 111             «Артём Волков»   <- video folded
-//   font_scale 1.3    3 x 44     72 / 145             «Артём »
-//   font_scale 1.3    2 x 44    116 / 145             «Артём Вол»      <- fold alone falls short
-//   font_scale 1.3    2 x 44 + wrap                   «Артём Волков», header 56 -> 75 px
-//   font_scale 2.0    3 x 44     72 / 223             «Арт»
-//   font_scale 2.0    2 x 44 + wrap                   «Артём Волков», header 72 -> 143 px
-//
-//   COMPOSER          text box   «Написать сообщение…»   «Сообщение»
-//   320 dp fs 1.0     136        160  cut               81  fits
-//   320 dp fs 1.3     136        208  cut              105  fits
-//   320 dp fs 2.0     136        320  cut              162  cut  -> row wraps, box 196, fits
-//   390 dp fs 2.0     209        320  cut              162  fits
-//   430 dp fs 2.0     246        320  cut              162  fits
-//
-// Two mechanisms, both already used by this product: fold a secondary icon into the header menu
-// (V105 did it for search), and let fixed chrome grow instead of cutting words once the system font
-// is enlarged (V109 did it for screen titles). Nothing is deleted: the video call becomes the first
-// item of the menu that is already in the bar, and it is offered only while a call is possible.
+// clients/ui/test/visual_chat_header_fold_v113.test.ts — V205 keeps both 1:1 call actions visible on
+// phones. Search may still fold into overflow so the identity has room, but audio and video are
+// adjacent primary actions and must never move behind a menu.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -203,80 +178,71 @@ const openMenu = (root: StubNode): void => {
   overflow.dispatch("click", { stopPropagation() {} });
 };
 
-test("V113: a phone bar keeps the audio call and hands the video call to the menu", async () => {
+test("V205: a phone bar keeps audio and video calls side by side", async () => {
   useViewport(true);
   const view = await open("dialog");
-
-  const titles = barTitles(view.root);
-  assert.ok(
-    titles.includes(i18n.t("call.startAudio")),
-    "the audio call is the action the bar keeps",
-  );
-  assert.ok(
-    !titles.includes(i18n.t("call.startVideo")),
-    "with 3 x 44 px of icons the 320 dp title box is 72 px and «Артём Волков» needs 111",
-  );
-
-  openMenu(view.root);
-  const item = view.root.find(
-    (n) => n.tag === "button" && n.attrs["data-action"] === "chat-video-call",
-  );
-  assert.ok(
-    item,
-    "the folded video call is offered by the header menu — folded, not deleted",
-  );
-  assert.equal(
-    item.textContent.includes(i18n.t("call.startVideo")),
-    true,
-    "the item is labelled",
-  );
-
-  item.dispatch("click", {});
-  await settle();
-  assert.deepEqual(
-    view.calls,
-    [{ peer: 2, video: true }],
-    "choosing it starts the same video call the icon started, with the same peer",
-  );
-  view.destroy();
+  try {
+    const titles = barTitles(view.root);
+    assert.deepEqual(
+      titles.slice(0, 2),
+      [i18n.t("call.startAudio"), i18n.t("call.startVideo")],
+      "both primary call actions stay visible and adjacent on a phone",
+    );
+    openMenu(view.root);
+    assert.equal(
+      view.root.find((n) => n.tag === "button" && n.attrs["data-action"] === "chat-video-call"),
+      null,
+      "the visible video action must not be duplicated in overflow",
+    );
+    const video = view.root.find(
+      (n) => n.tag === "button" && n.attrs.title === i18n.t("call.startVideo") && !n.hidden,
+    );
+    assert.ok(video, "the phone exposes a directly tappable video button");
+    video.dispatch("click");
+    await settle();
+    assert.deepEqual(view.calls, [{ peer: 2, video: true }]);
+  } finally {
+    view.destroy();
+  }
 });
 
-test("V113: a group has nobody to ring, so the menu offers no call either", async () => {
+test("V205: a group does not expose dead one-to-one call actions", async () => {
   useViewport(true);
   const view = await open("group");
-  openMenu(view.root);
-  const item = view.root.find(
-    (n) => n.tag === "button" && n.attrs["data-action"] === "chat-video-call",
-  );
-  assert.equal(
-    item,
-    null,
-    "V75 hid the dead icon; the fold must not resurrect it as a dead menu row",
-  );
-  view.destroy();
+  try {
+    const titles = barTitles(view.root);
+    assert.equal(titles.includes(i18n.t("call.startAudio")), false);
+    assert.equal(titles.includes(i18n.t("call.startVideo")), false);
+    openMenu(view.root);
+    assert.equal(
+      view.root.find((n) => n.tag === "button" && n.attrs["data-action"] === "chat-video-call"),
+      null,
+    );
+  } finally {
+    view.destroy();
+  }
 });
 
-test("V113: a wide window keeps the video call as an icon and out of the menu", async () => {
+test("V205: a wide window also keeps both call actions visible", async () => {
   useViewport(false);
   const view = await open("dialog");
-  assert.ok(
-    barTitles(view.root).includes(i18n.t("call.startVideo")),
-    "a desktop bar has the width for both call buttons",
-  );
-  openMenu(view.root);
-  assert.equal(
-    view.root.find(
-      (n) => n.tag === "button" && n.attrs["data-action"] === "chat-video-call",
-    ),
-    null,
-    "the same action must never be reachable twice in one bar",
-  );
-  view.destroy();
+  try {
+    const titles = barTitles(view.root);
+    assert.deepEqual(
+      titles.slice(0, 2),
+      [i18n.t("call.startAudio"), i18n.t("call.startVideo")],
+    );
+    openMenu(view.root);
+    assert.equal(
+      view.root.find((n) => n.tag === "button" && n.attrs["data-action"] === "chat-video-call"),
+      null,
+    );
+  } finally {
+    view.destroy();
+  }
 });
 
-test("V113b: a wide window with a narrow conversation column folds like a phone", async () => {
-  // Landscape on a 390 dp phone: the window is 819 px, so `(max-width: 480px)` is false, but the
-  // shell is two-pane and the conversation column is 388 px — measured on the signed APK.
+test("V205: a narrow conversation column folds search, never video", async () => {
   useViewport(false);
   const observers: Array<{ target: StubNode; fire: () => void }> = [];
   const realRO = (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
@@ -288,64 +254,25 @@ test("V113b: a wide window with a narrow conversation column folds like a phone"
     }
     disconnect(): void {}
   };
-  // A failed assertion must not leave the screen's timers running: node's runner would then keep
-  // the process alive after reporting the failure, and a red test would read as a hung suite.
   let view: Opened | null = null;
   try {
     view = await open("dialog");
-    assert.ok(
-      barTitles(view.root).includes(i18n.t("call.startVideo")),
-      "before layout the bar can only trust the window, and the window says desktop",
-    );
     const header = view.root.find((n) => n.hasClass("gc-feed-header"));
     assert.ok(header, "the bar exists");
     (header as unknown as { getBoundingClientRect: () => { width: number } }).getBoundingClientRect =
       () => ({ width: 388 });
     const watcher = observers.find((o) => o.target === header);
-    assert.ok(watcher, "the bar watches its OWN size, not only the window's");
+    assert.ok(watcher, "the bar watches its own size");
     watcher.fire();
-
     assert.deepEqual(
       barTitles(view.root),
-      [i18n.t("call.startAudio"), i18n.t("chat.rowActions")],
-      "388 px of bar is narrower than any phone in portrait, so it folds like one",
+      [i18n.t("call.startAudio"), i18n.t("call.startVideo"), i18n.t("chat.rowActions")],
+      "search moves to overflow while both call buttons remain in the bar",
     );
     openMenu(view.root);
-    assert.ok(
-      view.root.find(
-        (n) => n.tag === "button" && n.attrs["data-action"] === "chat-video-call",
-      ),
-      "and the folded call is offered by the menu, exactly as on a phone",
-    );
-  } finally {
-    view?.destroy();
-    (globalThis as { ResizeObserver?: unknown }).ResizeObserver = realRO;
-  }
-});
-
-test("V113b: a genuinely wide bar keeps every icon", async () => {
-  useViewport(false);
-  const observers: Array<{ target: StubNode; fire: () => void }> = [];
-  const realRO = (globalThis as { ResizeObserver?: unknown }).ResizeObserver;
-  (globalThis as { ResizeObserver?: unknown }).ResizeObserver = class {
-    cb: () => void;
-    constructor(cb: () => void) { this.cb = cb; }
-    observe(target: StubNode): void {
-      observers.push({ target, fire: () => this.cb() });
-    }
-    disconnect(): void {}
-  };
-  let view: Opened | null = null;
-  try {
-    view = await open("dialog");
-    const header = view.root.find((n) => n.hasClass("gc-feed-header"));
-    assert.ok(header, "the bar exists");
-    (header as unknown as { getBoundingClientRect: () => { width: number } }).getBoundingClientRect =
-      () => ({ width: 900 });
-    observers.find((o) => o.target === header)?.fire();
-    assert.ok(
-      barTitles(view.root).includes(i18n.t("call.startVideo")),
-      "measuring the bar must not fold a bar that has the room",
+    assert.equal(
+      view.root.find((n) => n.tag === "button" && n.attrs["data-action"] === "chat-video-call"),
+      null,
     );
   } finally {
     view?.destroy();
@@ -388,7 +315,7 @@ test("V113: an enlarged system font lets the peer's name wrap instead of being c
       css.lastIndexOf(".gc-feed-title, .gc-feed-subtitle)"),
     ),
     /:root\[data-gc-text-zoom\]/,
-    "a device at the default font must render byte-identical CSS: the fold alone fixes it there",
+    "responsive title wrapping remains scoped to enlarged system text",
   );
 });
 

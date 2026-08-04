@@ -1,1 +1,1 @@
-Generated from GreenChat commit 9e3ee2c846d5eea045733753a09822536b345066 by an explicit client-only allowlist.
+Generated from GreenChat commit 84d24c93a3a3387650b0bb8e5d9aa3df17694b24 by an explicit client-only allowlist.

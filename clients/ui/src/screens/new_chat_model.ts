@@ -36,6 +36,8 @@ export interface DirectoryRow {
   // today by arithmetic accident: `avatarTone` folds h*31+c, so a leading "@" adds 64*31^n, and 64 is
   // a multiple of AVATAR_TONES=8. The seed makes that independent of the constant, not reliant on it.)
   avatarSeed?: string;
+  // Real profile image. Absent keeps the deterministic initials fallback and old payload compatibility.
+  avatarFileId?: number;
   // T-514 (§4): set only for a service account (users.is_system) so the overlay can render the badge.
   // Optional/additive — absent for every normal account (and for today's payloads without the flag).
   serviceAccount?: true;
@@ -71,6 +73,7 @@ export function userRows(users: SearchUser[], selfId: number): DirectoryRow[] {
         // Emitted only when the avatar must NOT hash the title — i.e. exactly when the title became
         // "@handle". Rows for people who have a display name stay byte-identical to before V168.
         ...(avatarSeed === title ? {} : { avatarSeed }),
+        ...(typeof u.avatar_file_id === "number" && u.avatar_file_id > 0 ? { avatarFileId: u.avatar_file_id } : {}),
         ...(isServiceAccount(u) ? { serviceAccount: true as const } : {}),
       };
     });

@@ -14,6 +14,7 @@ import {
   windowsOverlayConfig,
   peMachine,
   sourceContracts,
+  tdlibBuildPlan,
   windowsArch,
   windowsPowerShellEnvironment,
   windowsPowerShellModulePath,
@@ -72,6 +73,29 @@ test("Windows x64 and ARM64 use deterministic independent targets and filenames"
     manifest: "windows-x64-release.json",
     checksums: "SHA256SUMS-windows-x64.txt",
   });
+});
+
+test("ARM64 TDLib runs native generators before a true cross-compile", () => {
+  const x64 = tdlibBuildPlan(windowsArch("x64"), {
+    sourceRoot: "C:/td-src",
+    binaryRoot: "C:/build/td-target",
+    toolchain: "C:/vcpkg/toolchain.cmake",
+  });
+  assert.equal(x64.native, null);
+  assert.equal(x64.target.configure.includes("-DCMAKE_SYSTEM_NAME=Windows"), false);
+
+  const arm64 = tdlibBuildPlan(windowsArch("arm64"), {
+    sourceRoot: "C:/td-src",
+    binaryRoot: "C:/build/td-target",
+    toolchain: "C:/vcpkg/toolchain.cmake",
+  });
+  assert.ok(arm64.native);
+  assert.deepEqual(arm64.native.configure.slice(4, 6), ["-A", "x64"]);
+  assert.ok(arm64.native.configure.includes("-DTD_GENERATE_SOURCE_FILES=ON"));
+  assert.ok(arm64.native.build.includes("prepare_cross_compiling"));
+  assert.ok(arm64.target.configure.includes("ARM64"));
+  assert.ok(arm64.target.configure.includes("-DCMAKE_SYSTEM_NAME=Windows"));
+  assert.ok(arm64.target.configure.includes("-DCMAKE_SYSTEM_PROCESSOR=ARM64"));
 });
 
 test("certificate thumbprints are canonical and malformed identities fail closed", () => {

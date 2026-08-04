@@ -11,6 +11,7 @@ import { apiErrorCode, apiErrorData, describeError, type ApiLike, type SearchUse
 import { createContactsCopy } from "./contacts_copy.ts";
 import { failureLine, failureState, skeletonList, stateView } from "./state_view.ts";
 import { avatarTone, initials } from "./message_menu.ts";
+import { bindAvatarImage, type AvatarImageBinding } from "./avatar_media.ts";
 import { SearchController, type SearchState, type SelfRef } from "./new_chat_model.ts";
 import { isServiceAccount, serviceAccountLabel } from "./service_account.ts";
 import {
@@ -74,6 +75,11 @@ export function createContactsScreen(deps: ContactsScreenDeps): { root: HTMLElem
   let syncBusy = false;
   let inviteBusy = false;
   const pending = new Set<number>();
+  let avatarBindings: AvatarImageBinding[] = [];
+  const resetAvatarBindings = (): void => {
+    for (const binding of avatarBindings) binding.destroy();
+    avatarBindings = [];
+  };
 
   const win = (typeof window === "undefined" ? undefined : window) as GrowthWindow | undefined;
   const nav = typeof navigator === "undefined" ? undefined : navigator;
@@ -216,7 +222,7 @@ export function createContactsScreen(deps: ContactsScreenDeps): { root: HTMLElem
   };
 
   const personRow = (
-    opts: { id: number; title: string; subtitle: string; service: boolean; action: HTMLElement | null },
+    opts: { id: number; title: string; subtitle: string; service: boolean; avatarFileId: number | null; action: HTMLElement | null },
   ): HTMLElement => {
     const top: Array<Node | string> = [el("span", { class: "gc-row-title" }, [opts.title])];
     if (opts.service) top.push(el("span", { class: "gc-badge gc-badge-service" }, [serviceAccountLabel(i18n)]));
@@ -232,12 +238,11 @@ export function createContactsScreen(deps: ContactsScreenDeps): { root: HTMLElem
     ]) as HTMLButtonElement;
     if (api.createDialog) open.addEventListener("click", () => void openDialog(opts.id, open));
     else open.disabled = true;
-    const children: Array<HTMLElement> = [
-      el("div", { class: "gc-avatar", "data-tone": String(avatarTone(opts.title)), "aria-hidden": true }, [
-        initials(opts.title),
-      ]),
-      open,
-    ];
+    const avatar = el("div", { class: "gc-avatar", "data-tone": String(avatarTone(opts.title)), "aria-hidden": true }, [
+      initials(opts.title),
+    ]);
+    avatarBindings.push(bindAvatarImage(avatar, api, opts.avatarFileId, opts.title));
+    const children: Array<HTMLElement> = [avatar, open];
     if (opts.action) children.push(opts.action);
     return el("div", { class: "gc-chat-row", role: "listitem" }, children);
   };
@@ -460,6 +465,7 @@ export function createContactsScreen(deps: ContactsScreenDeps): { root: HTMLElem
         title,
         subtitle: contactSubtitle(row),
         service: false,
+        avatarFileId: row.avatar_file_id,
         action: iconAction("trash", t("contacts.remove", { name: title }), () => { void onRemove(row); }),
       }));
     }
@@ -507,6 +513,7 @@ export function createContactsScreen(deps: ContactsScreenDeps): { root: HTMLElem
         title,
         subtitle: user.username ? "@" + user.username : "",
         service: isServiceAccount(user),
+        avatarFileId: user.avatar_file_id,
         action: iconAction("plus", t("contacts.add", { name: title }), () => { void onAdd(user); }),
       }));
     }
@@ -515,6 +522,7 @@ export function createContactsScreen(deps: ContactsScreenDeps): { root: HTMLElem
   };
 
   const render = (): void => {
+    resetAvatarBindings();
     clear(listHost);
     listHost.append(renderContacts());
     const found = renderDirectory();
@@ -573,6 +581,7 @@ export function createContactsScreen(deps: ContactsScreenDeps): { root: HTMLElem
     destroy() {
       disposed = true;
       ctrl.cancel();
+      resetAvatarBindings();
     },
   };
 }

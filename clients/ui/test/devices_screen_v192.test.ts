@@ -6,7 +6,7 @@ import { ru } from "../src/locales/ru.ts";
 import type { ApiLike } from "../src/screens/api.ts";
 import { createDevicesScreen, qrLoginToken, type DeviceSession } from "../src/screens/devices_screen.ts";
 import { createSettingsScreen } from "../src/screens/settings_screen.ts";
-import { installDomStub, settle, type StubNode } from "./dom_stub.ts";
+import { installDomStub, settle, StubNode } from "./dom_stub.ts";
 
 installDomStub();
 const i18n = createI18n({ locale: "ru", dicts: { ru, en } });
@@ -128,4 +128,60 @@ test("QR parser accepts the native deep link, a web route and a raw token, but r
   assert.equal(qrLoginToken(`greenchat://auth/qr/${token}`), token);
   assert.equal(qrLoginToken(`https://chat.example/#/auth/qr/${token}`), token);
   assert.equal(qrLoginToken("not a QR login"), null);
+});
+
+
+test("V205: web camera scanning works without BarcodeDetector through the compatible decoder", async () => {
+  const token = "b".repeat(96);
+  const opened: string[] = [];
+  let stopped = 0;
+  let decoded = 0;
+  const navigatorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  const detectorDescriptor = Object.getOwnPropertyDescriptor(globalThis, "BarcodeDetector");
+  const playDescriptor = Object.getOwnPropertyDescriptor(StubNode.prototype, "play");
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: {
+      mediaDevices: {
+        async getUserMedia() {
+          return { getTracks: () => [{ stop: () => { stopped += 1; } }] };
+        },
+      },
+    },
+  });
+  Object.defineProperty(globalThis, "BarcodeDetector", { configurable: true, value: undefined });
+  Object.defineProperty(StubNode.prototype, "play", {
+    configurable: true,
+    value: async () => {},
+  });
+  const screen = createDevicesScreen({
+    api: new Api(),
+    i18n,
+    qrDecoder: {
+      async decode() {
+        decoded += 1;
+        return `greenchat://auth/qr/${token}`;
+      },
+    },
+    onOpenQr: (value) => opened.push(value),
+  });
+  try {
+    await settle();
+    const root = screen.root as unknown as StubNode;
+    byAction(root, "scan-qr").dispatch("click");
+    await settle();
+    await settle();
+    assert.equal(decoded, 1, "the compatibility decoder receives the live camera frame");
+    assert.deepEqual(opened, [token]);
+    assert.equal(stopped, 1, "the camera is released immediately after a successful scan");
+    assert.doesNotMatch(root.textContent, /Сканирование камерой недоступно/);
+  } finally {
+    screen.destroy();
+    if (navigatorDescriptor) Object.defineProperty(globalThis, "navigator", navigatorDescriptor);
+    else delete (globalThis as { navigator?: unknown }).navigator;
+    if (detectorDescriptor) Object.defineProperty(globalThis, "BarcodeDetector", detectorDescriptor);
+    else delete (globalThis as { BarcodeDetector?: unknown }).BarcodeDetector;
+    if (playDescriptor) Object.defineProperty(StubNode.prototype, "play", playDescriptor);
+    else delete (StubNode.prototype as StubNode & { play?: unknown }).play;
+  }
 });

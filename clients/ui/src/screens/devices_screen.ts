@@ -6,6 +6,7 @@ import { icon } from "../icons.ts";
 import type { ApiLike } from "./api.ts";
 import { describeError } from "./api.ts";
 import { skeletonLine } from "./state_view.ts";
+import { createQrFrameDecoder, type QrFrameDecoder } from "./qr_decoder.ts";
 
 export interface DeviceSession {
   id: number;
@@ -25,19 +26,12 @@ export interface DevicesScreenDeps {
   i18n: I18n;
   /** Router seam for tests/native shells. The hash route is the portable default. */
   onOpenQr?: (token: string) => void;
+  /** Test/native seam. Production uses BarcodeDetector with a jsQR pixel fallback. */
+  qrDecoder?: QrFrameDecoder;
 }
 
 type MediaTrack = { stop(): void };
 type MediaStreamLike = { getTracks(): MediaTrack[] };
-type BarcodeResult = { rawValue?: string };
-type BarcodeDetectorLike = { detect(source: unknown): Promise<BarcodeResult[]> };
-type BarcodeDetectorCtor = new (opts?: { formats?: string[] }) => BarcodeDetectorLike;
-
-function barcodeDetectorCtor(): BarcodeDetectorCtor | null {
-  const ctor = (globalThis as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
-  return typeof ctor === "function" ? ctor : null;
-}
-
 export function qrLoginToken(value: string): string | null {
   const input = value.trim();
   if (/^[0-9a-f]{96}$/i.test(input)) return input;
@@ -58,6 +52,7 @@ export function createDevicesScreen(deps: DevicesScreenDeps): { root: HTMLElemen
   let cameraBusy = false;
   let stream: MediaStreamLike | null = null;
   let scanTimer: ReturnType<typeof setTimeout> | null = null;
+  const qrDecoder = deps.qrDecoder ?? createQrFrameDecoder();
 
   const root = el("div", { class: "gc-devices" });
   const status = el("p", { class: "gc-settings-status", role: "status", "aria-live": "polite" });
@@ -89,11 +84,10 @@ export function createDevicesScreen(deps: DevicesScreenDeps): { root: HTMLElemen
 
   const beginCamera = async (panel: HTMLElement, video: HTMLVideoElement): Promise<void> => {
     if (cameraBusy) return;
-    const Detector = barcodeDetectorCtor();
     const nav = (globalThis as {
       navigator?: { mediaDevices?: { getUserMedia(constraints: unknown): Promise<MediaStreamLike> } };
     }).navigator;
-    if (!Detector || !nav?.mediaDevices?.getUserMedia) {
+    if (!nav?.mediaDevices?.getUserMedia) {
       status.textContent = i18n.t("devices.cameraUnavailable");
       return;
     }
@@ -116,16 +110,10 @@ export function createDevicesScreen(deps: DevicesScreenDeps): { root: HTMLElemen
       await video.play();
       panel.hidden = false;
       status.textContent = i18n.t("devices.cameraPoint");
-      const detector = new Detector({ formats: ["qr_code"] });
       const scan = async (): Promise<void> => {
         if (disposed || !cameraBusy) return;
-        try {
-          const result = await detector.detect(video);
-          const raw = result.find((item) => typeof item.rawValue === "string")?.rawValue;
-          if (raw && openToken(raw)) return;
-        } catch {
-          // Some WebViews reject detect() until the first decoded video frame; retry below.
-        }
+        const raw = await qrDecoder.decode(video);
+        if (raw && openToken(raw)) return;
         scanTimer = setTimeout(() => { void scan(); }, 180);
       };
       void scan();

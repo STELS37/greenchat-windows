@@ -131,27 +131,24 @@ const shown = (root: StubNode): StubNode[] => {
   return actions.children.filter((n) => n.tag === "button" && !n.hidden && n.attrs.hidden === undefined);
 };
 
-test("V105/V113: on a phone the chat header carries two actions, not four", async () => {
+test("V105/V205: on a phone the chat header keeps both call actions and folds only search", async (t) => {
   useViewport(true);
   const view = await openDialog();
+  t.after(() => view.destroy());
 
   const buttons = shown(view.root);
   assert.equal(
     buttons.length,
-    2,
-    // V113 lowered this from three: at 320 dp (the narrowest phone in the owner's P0 matrix) three
-    // icons left the title 72 px and «Артём Волков» needs 111, so the bar painted «Артём В».
-    `a phone bar cannot hold 44 px icons and still name the peer: with ${buttons.length} `
-      + `icons the title gets ${320 - 144 - 44 * buttons.length} px and «Артём Волков» needs 111`,
+    3,
+    // V205 intentionally restores video as a first-class phone action. Search alone folds; CSS owns
+    // the remaining identity-width pressure instead of hiding a call capability.
+    `a phone bar must keep audio, video and overflow: got ${buttons.length} actions`,
   );
 
-  // The one action that stays is the reason a 1:1 dialog is open at all, plus the menu.
+  // Both calls are primary actions; only search moves into the already-present menu.
   const titles = buttons.map((b) => b.attrs.title);
   assert.ok(titles.includes(i18n.t("call.startAudio")), "the audio call stays in the bar");
-  assert.ok(
-    !titles.includes(i18n.t("call.startVideo")),
-    "V113: the video call folds into the menu on a phone",
-  );
+  assert.ok(titles.includes(i18n.t("call.startVideo")), "the video call stays visible on phones");
   assert.ok(
     buttons.some((b) => b.hasClass("gc-feed-overflow")),
     "the overflow menu stays in the bar",
@@ -176,26 +173,26 @@ test("V105/V113: on a phone the chat header carries two actions, not four", asyn
     .document.activeElement;
   assert.ok(focused?.hasClass("gc-input"), "opening search focuses its field, as the icon did");
 
-  view.destroy();
 });
 
-test("V105: a wide window keeps the search icon in the bar", async () => {
+test("V105: a wide window keeps the search icon in the bar", async (t) => {
   useViewport(false);
   const view = await openDialog();
+  t.after(() => view.destroy());
   const titles = shown(view.root).map((b) => b.attrs.title);
   assert.equal(titles.length, 4, "a desktop bar has room for all four actions");
   assert.ok(titles.includes(i18n.t("common.search")), "search stays a first-class icon on desktop");
-  view.destroy();
 });
 
-test("V105: rotating into a phone width folds the icon, and the screen unsubscribes", async () => {
+test("V105/V205: rotating into a phone width folds search but keeps both calls", async (t) => {
   const vp = useViewport(false);
   const view = await openDialog();
+  t.after(() => view.destroy());
   assert.equal(shown(view.root).length, 4, "starts wide");
   assert.ok(vp.listeners() > 0, "the header listens for the viewport changing under it");
 
   vp.fire(true);
-  assert.equal(shown(view.root).length, 2, "turning the phone upright folds search and video");
+  assert.equal(shown(view.root).length, 3, "turning the phone upright folds search, not video");
   vp.fire(false);
   assert.equal(shown(view.root).length, 4, "and turning back restores them");
 
@@ -203,9 +200,9 @@ test("V105: rotating into a phone width folds the icon, and the screen unsubscri
   assert.equal(vp.listeners(), 0, "destroy() leaves no listener behind on the media query");
 });
 
-test("V105: a shell without matchMedia keeps every action visible", async () => {
+test("V105: a shell without matchMedia keeps every action visible", async (t) => {
   delete (globalThis as unknown as { matchMedia?: unknown }).matchMedia;
   const view = await openDialog();
+  t.after(() => view.destroy());
   assert.equal(shown(view.root).length, 4, "an unknown viewport must not hide an action");
-  view.destroy();
 });

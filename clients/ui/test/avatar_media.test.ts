@@ -114,7 +114,7 @@ test("cross-origin native avatar is fetched into a CSP-safe blob URL and revoked
     const request = requests[0];
     assert.equal(request?.url, "https://api.greenchat.example/f/7?e=99&u=2&s=sig");
     assert.equal(request?.init?.credentials, "omit");
-    assert.equal(request?.init?.cache, "no-store");
+    assert.equal(request?.init?.cache, "force-cache");
     const candidate = target.querySelector("img.gc-avatar-photo");
     assert.ok(candidate);
     assert.equal(candidate.getAttribute("src"), "blob:http://tauri.localhost/avatar-7");
@@ -181,6 +181,8 @@ test("a late signed URL for an old avatar cannot replace a newer loaded avatar",
   };
   const binding = bindAvatarImage(target as unknown as HTMLElement, api, 1, "Green Chat");
   const latest = binding.set(2);
+  for (let i = 0; i < 6 && !resolvers.has(2); i += 1) await settle();
+  assert.ok(resolvers.has(2), "the latest revision reaches the API after the lazy binding loads");
   resolvers.get(2)?.({ url: "/new-photo", expires_at: 99 });
   await settle();
   const candidate = target.querySelector("img.gc-avatar-photo");

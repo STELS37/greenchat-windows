@@ -89,9 +89,13 @@ function press(node: StubNode, key: string): boolean {
   return prevented;
 }
 
+const settleLazyPicker = async (): Promise<void> => {
+  for (let i = 0; i < 6; i += 1) await new Promise<void>((resolve) => setImmediate(resolve));
+};
+
 // ---- 1. the tab-order bill -------------------------------------------------------------------------
 
-test("V155: opening the emoji panel does not turn the composer into a 101-stop corridor", () => {
+test("V155: opening the emoji panel does not turn the composer into a 101-stop corridor", async () => {
   installDomStub();
   const body = new StubNode("body");
   doc().body = body;
@@ -108,6 +112,7 @@ test("V155: opening the emoji panel does not turn the composer into a 101-stop c
   const emojiBtn = root.find((n) => n.hasClass("gc-composer-emoji"))!;
   emojiBtn.focus();
   emojiBtn.dispatch("click");
+  await settleLazyPicker();
 
   const panel = root.find((n) => n.hasClass("gc-emoji-panel"))!;
   assert.equal(panel.hidden, false, "the click opened it");

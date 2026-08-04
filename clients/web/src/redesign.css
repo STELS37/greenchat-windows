@@ -68,6 +68,23 @@
    carries a peer tone is immune to a chip stylesheet that happens to share its class. */
 .gc-avatar[data-tone] { color: var(--gc-accent-fg); border: 0; box-shadow: none; }
 
+/* V208: every decoded avatar photo is mounted inside the existing initials disc. The image must own
+   exactly that disc, not its intrinsic pixel size; native WebViews exposed the missing generic rule
+   most visibly by drawing oversized or square photos in Contacts, Calls and Bot Center. */
+:is(.gc-avatar, .gc-profile-avatar, .gc-info-avatar, .gc-info-member-avatar, .gc-feed-avatar, .gc-bubble-avatar, .gc-shell-account-avatar, .gc-bot-avatar, .gc-call-avatar) {
+  position: relative;
+  overflow: hidden;
+}
+.gc-avatar-photo {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+
 /* ── Chat list ─────────────────────────────────────────────────────────── */
 :is(.gc-superapp, .gc-overlay, .gc-palette-overlay, .gc-msgmenu-layer) .gc-chats-header { padding-bottom: 0; border-bottom: 0; gap: 10px; flex-direction: column; align-items: stretch; }
 .gc-chats-titlebar { display: flex; align-items: center; justify-content: space-between; gap: var(--gc-gap); }
@@ -5744,4 +5761,93 @@ input[type="radio"]:not(.gc-toggle):focus-visible { outline: 2px solid var(--gc-
 
 .gc-chats > .gc-chat-list {
   padding-bottom: calc(86px + var(--gc-safe-bottom));
+}
+
+/* V205 — group ownership controls inside the chat-info sheet. */
+:is(.gc-superapp, .gc-overlay) .gc-info-management {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-block: 8px 12px;
+}
+:is(.gc-superapp, .gc-overlay) :is(.gc-info-group-settings, .gc-info-member-editor) {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+:is(.gc-superapp, .gc-overlay) :is(.gc-info-group-settings, .gc-info-member-editor) > h4 {
+  margin: 0;
+  font-size: var(--gc-fs-16);
+  font-weight: var(--gc-weight-bold);
+}
+:is(.gc-superapp, .gc-overlay) .gc-info-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--gc-fg-muted);
+  font-size: var(--gc-fs-13);
+}
+:is(.gc-superapp, .gc-overlay) .gc-info-field > :is(.gc-input, .gc-select) {
+  width: 100%;
+  color: var(--gc-fg);
+}
+:is(.gc-superapp, .gc-overlay) .gc-info-about-input {
+  min-height: 88px;
+  resize: vertical;
+}
+:is(.gc-superapp, .gc-overlay) .gc-info-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding-block: 9px;
+  color: var(--gc-fg);
+  font-size: var(--gc-fs-14);
+  cursor: pointer;
+}
+:is(.gc-superapp, .gc-overlay) .gc-info-check > input { margin-top: 1px; }
+:is(.gc-superapp, .gc-overlay) .gc-info-member { cursor: default; }
+:is(.gc-superapp, .gc-overlay) .gc-info-member-open {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+:is(.gc-superapp, .gc-overlay) button.gc-info-member-open { cursor: pointer; }
+:is(.gc-superapp, .gc-overlay) .gc-info-member-role { margin-left: 0; }
+:is(.gc-superapp, .gc-overlay) .gc-info-member-manage {
+  flex: none;
+  min-height: 36px;
+  padding-inline: 12px;
+}
+:is(.gc-superapp, .gc-overlay) .gc-info-danger-actions {
+  padding-top: 10px;
+  border-top: 1px solid var(--gc-border);
+}
+:is(.gc-superapp, .gc-overlay) .gc-info-danger-actions .gc-btn-danger {
+  color: var(--gc-danger, #d63b3b);
+}
+@media (max-width: 480px) {
+  :is(.gc-superapp, .gc-overlay) .gc-info-member {
+    gap: 7px;
+  }
+  :is(.gc-superapp, .gc-overlay) .gc-info-member-role {
+    max-width: 92px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  :is(.gc-superapp, .gc-overlay) .gc-info-member-manage {
+    min-width: 44px;
+    padding-inline: 9px;
+  }
 }

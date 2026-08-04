@@ -26,8 +26,7 @@ export type {
 // i18n.
 export { createI18n } from "./i18n.ts";
 export type { I18n, I18nOptions, Locale, Dict, Params } from "./i18n.ts";
-export { ru } from "./locales/ru.ts";
-export { en } from "./locales/en.ts";
+// Locale dictionaries are loaded directly by each shell, not through this startup barrel.
 
 // Theme & density tokens.
 export {

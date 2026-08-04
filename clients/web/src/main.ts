@@ -82,8 +82,6 @@ import {
 } from "../../core/src/index.ts";
 import {
   createI18n,
-  ru,
-  en,
   ThemeController,
   browserThemeEnv,
   watchSystemTextZoom, browserTextZoomEnv,
@@ -100,7 +98,7 @@ import {
   presentUpdateStatus,
   // GC_MESSENGER_DIRECT_APK_ONLY_END
 } from "../../ui/src/index.ts";
-import type { Command, Locale } from "../../ui/src/index.ts";
+import type { Command, Dict, Locale } from "../../ui/src/index.ts";
 import type { LangPref } from "../../ui/src/lang.ts";
 import {
   createApp, Session, createAccountMediaSettings, createBadgeRefreshController,
@@ -117,6 +115,7 @@ import type {
 } from "../../ui/src/screens/index.ts";
 import type { ConferenceScreenShareGrant } from "../../ui/src/screens/conference_model.ts";
 import { createBrowserCallMedia } from "./call_media.ts";
+import { createBrowserCallTones } from "./call_tones.ts";
 import type { ConferenceOverlay } from "./conference_overlay.ts";
 import { webSessionStorage } from "./session_storage.ts";
 import { webLocalData } from "./local_data.ts";
@@ -162,6 +161,26 @@ const CONFIG_SIGNATURE_PIN =
 // Client-quality cohorts must identify the exact serviced artifact, not only a marketing version that may
 // span several deployments. The full source build id remains under the server's 64-char version cap.
 const QUALITY_APP_VERSION = `${APP_VERSION}+${BUILD_ID}`;
+
+
+// Keep locale catalogues out of the startup closure. The selected language is awaited before the UI
+// starts, while the alternate language is fetched after the first render and is always awaited before
+// a manual/system switch. This preserves a complete dictionary with no raw-key or wrong-language flash,
+// but avoids shipping both ~60–90 KB source catalogues in the initial JavaScript bundle.
+const localeLoads = new Map<Locale, Promise<Dict>>();
+function loadUiLocale(locale: Locale): Promise<Dict> {
+  const existing = localeLoads.get(locale);
+  if (existing) return existing;
+  const request = (locale === "ru"
+    ? import("../../ui/src/locales/ru.ts").then((module) => module.ru)
+    : import("../../ui/src/locales/en.ts").then((module) => module.en))
+    .catch((error) => {
+      localeLoads.delete(locale);
+      throw error;
+    });
+  localeLoads.set(locale, request);
+  return request;
+}
 
 // T-419 — network resilience / «свой сервер». The web build talks to its own origin by default
 // (`gc.server` unset → primary ""). A user can point the client at a self-hosted / alternate server on the
@@ -608,7 +627,7 @@ function showCrashOffer(labels: { text: string; send: string; dismiss: string },
   } catch { /* no DOM — the offer is best-effort UX, never critical */ }
 }
 
-function boot(): void {
+async function boot(): Promise<void> {
   const host = document.getElementById("app");
   if (!host) return;
   host.removeAttribute("aria-busy");
@@ -635,14 +654,30 @@ function boot(): void {
     const tag = navigator.languages.find((value) => /^(ru|en)(-|$)/i.test(value));
     return (tag?.slice(0, 2).toLowerCase() as Locale | undefined) ?? "en";
   };
-  const i18n = createI18n({ locale: resolvedLanguage(), dicts: { ru, en } });
-  const setLangPref = (pref: LangPref): void => {
+  const initialLocale = resolvedLanguage();
+  const dicts: Record<Locale, Dict> = { ru: {}, en: {} };
+  dicts[initialLocale] = await loadUiLocale(initialLocale);
+  const loadedLocales = new Set<Locale>([initialLocale]);
+  const ensureLocale = async (locale: Locale): Promise<void> => {
+    if (loadedLocales.has(locale)) return;
+    dicts[locale] = await loadUiLocale(locale);
+    loadedLocales.add(locale);
+  };
+  const i18n = createI18n({ locale: initialLocale, dicts });
+  const setLangPref = async (pref: LangPref): Promise<void> => {
     langPref = pref;
     try { localStorage.setItem("gc.lang", langPref); } catch { /* local preference remains live */ }
-    i18n.setLocale(resolvedLanguage());
+    const next = resolvedLanguage();
+    await ensureLocale(next);
+    // A second preference/system-language change may have landed while the chunk was loading.
+    if (resolvedLanguage() === next) i18n.setLocale(next);
   };
   window.addEventListener("languagechange", () => {
-    if (langPref === "system") i18n.setLocale(resolvedLanguage());
+    if (langPref !== "system") return;
+    const next = resolvedLanguage();
+    void ensureLocale(next).then(() => {
+      if (langPref === "system" && resolvedLanguage() === next) i18n.setLocale(next);
+    }).catch(() => undefined);
   });
   // Keep the document language authoritative too. Besides assistive technology and spell-checking,
   // V187 uses :lang() to reserve the exact 24-hour or 12-hour metadata width in a pending message.
@@ -1474,6 +1509,10 @@ function boot(): void {
   // Everything a call needs that the screens layer may not touch lives here: the socket (signaling),
   // getUserMedia/RTCPeerConnection (call_media.ts) and a body-level overlay that survives every screen
   // swap — a call must not end because the person navigated to Settings mid-conversation.
+  const callTones = createBrowserCallTones({
+    incomingUrl: `/assets/call-incoming.mp3?v=${encodeURIComponent(BUILD_ID)}`,
+    outgoingUrl: `/assets/call-outgoing.mp3?v=${encodeURIComponent(BUILD_ID)}`,
+  });
   const callController = new CallController({
     signal: {
       send: (frame) => {
@@ -1504,7 +1543,10 @@ function boot(): void {
         return { id: u.id, name: u.name ?? "", username: u.username ?? null };
       } catch { return null; }
     },
-    onState: (state) => { callOverlay.render(state); },
+    onState: (state) => {
+      callTones.update(state);
+      callOverlay.render(state);
+    },
     // A finished call becomes a durable service row on the server, so the log must refetch. Reusing
     // the event feed keeps the screens layer free of shell-specific plumbing.
     onFinished: () => {
@@ -1697,7 +1739,7 @@ function boot(): void {
     lock: appLock.port,
     language: {
       get: () => Promise.resolve(langPref),
-      set: (pref: string) => { setLangPref(pref as LangPref); return Promise.resolve(); },
+      set: (pref: string) => setLangPref(pref as LangPref),
     },
     notifyMode: webNotifyModePort(),
 
@@ -1921,6 +1963,7 @@ function boot(): void {
     // wipe begins. Every old-account writer is invalidated now; async cleanup may finish later, but no
     // late completion can become current-account state.
 
+    callTones.stop();
     suspendTelegram();
     destroyConferenceRuntime();
     stopDataPlane();
@@ -2054,6 +2097,10 @@ function boot(): void {
     .catch(() => false)
     .finally(() => {
       app.start();
+      // The active catalogue was awaited before boot. Warm only the alternate language now, after the
+      // first synchronous app render, so later switching is instant without charging startup bytes.
+      const alternateLocale: Locale = i18n.locale === "ru" ? "en" : "ru";
+      setTimeout(() => { void ensureLocale(alternateLocale).catch(() => undefined); }, 0);
       if (session.isAuthed()) {
         void startSync();
         // GC_MESSENGER_DIRECT_APK_ONLY_START
@@ -2077,8 +2124,17 @@ function supportsIndexedDb(): boolean {
   catch { return false; }
 }
 
+const startBoot = (): void => {
+  void boot().catch(() => {
+    // A locale chunk is an immutable part of the same release. A failed first fetch is handled like
+    // any other broken startup asset: leave the shell's loading/error surface intact instead of
+    // rendering untranslated keys or half-initialising account state.
+    document.getElementById("app")?.removeAttribute("aria-busy");
+  });
+};
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", boot, { once: true });
+  document.addEventListener("DOMContentLoaded", startBoot, { once: true });
 } else {
-  boot();
+  startBoot();
 }

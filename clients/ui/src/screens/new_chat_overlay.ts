@@ -6,7 +6,7 @@ import type { I18n } from "../i18n.ts";
 import { el, clear } from "../dom.ts";
 import { createFocusTrap } from "../a11y.ts";
 import { describeError } from "./api.ts";
-import type { GlobalSearchResult, DialogChat } from "./api.ts";
+import type { ApiLike, GlobalSearchResult, DialogChat } from "./api.ts";
 import type { SelfRef } from "./chat_model.ts";
 import {
   SearchController,
@@ -19,6 +19,7 @@ import {
 import { serviceAccountLabel } from "./service_account.ts";
 import { icon, type IconName } from "../icons.ts";
 import { avatarTone, initials } from "./message_menu.ts";
+import { bindAvatarImage, type AvatarImageBinding } from "./avatar_media.ts";
 import { newChatText, type NewChatStringKey } from "./new_chat_strings.ts";
 import type { ContactRow } from "./contacts_model.ts";
 import type {
@@ -33,6 +34,7 @@ export interface NewChatOverlayDeps {
   i18n: I18n;
   self: SelfRef;
   search(q: string): Promise<GlobalSearchResult>;
+  avatarApi?: Pick<ApiLike, "get" | "resolveUrl">;
   listContacts?(): Promise<ContactRow[]>;
   createDialog(userId: number): Promise<DialogChat>;
   createGroup?(input: NewGroupInput): Promise<DialogChat>;
@@ -65,6 +67,11 @@ export function createNewChatOverlay(deps: NewChatOverlayDeps): NewChatOverlay {
   let activeCleanup: (() => void) | null = null;
   let creationRevision = 0;
   let trap: ReturnType<typeof createFocusTrap> | null = null;
+  let directoryAvatarBindings: AvatarImageBinding[] = [];
+  const resetDirectoryAvatars = (): void => {
+    for (const binding of directoryAvatarBindings) binding.destroy();
+    directoryAvatarBindings = [];
+  };
 
   const note = (node: HTMLElement, value: string): void => {
     node.textContent = value;
@@ -84,11 +91,14 @@ export function createNewChatOverlay(deps: NewChatOverlayDeps): NewChatOverlay {
 
   const avatarNode = (row: DirectoryRow): HTMLElement => {
     const seed = row.avatarSeed ?? row.title;
-    return row.kind === "self"
-      ? el("div", { class: "gc-avatar is-saved", "aria-hidden": "true" }, [icon("spark", "gc-icon gc-avatar-icon")])
-      : el("div", { class: "gc-avatar", "data-tone": String(avatarTone(seed)), "aria-hidden": "true" }, [
-          initials(seed),
-        ]);
+    if (row.kind === "self") {
+      return el("div", { class: "gc-avatar is-saved", "aria-hidden": "true" }, [icon("spark", "gc-icon gc-avatar-icon")]);
+    }
+    const avatar = el("div", { class: "gc-avatar", "data-tone": String(avatarTone(seed)), "aria-hidden": "true" }, [
+      initials(seed),
+    ]);
+    if (deps.avatarApi) directoryAvatarBindings.push(bindAvatarImage(avatar, deps.avatarApi, row.avatarFileId ?? null, row.title));
+    return avatar;
   };
 
   const personCopy = (row: DirectoryRow): HTMLElement => {
@@ -109,6 +119,7 @@ export function createNewChatOverlay(deps: NewChatOverlayDeps): NewChatOverlay {
     creationRevision += 1;
     activeCleanup?.();
     activeCleanup = null;
+    resetDirectoryAvatars();
     trap?.release();
     overlay.remove();
     if (closed) return;
@@ -146,6 +157,7 @@ export function createNewChatOverlay(deps: NewChatOverlayDeps): NewChatOverlay {
   };
 
   const renderDirectory = (state: SearchState): void => {
+    resetDirectoryAvatars();
     clear(directoryList);
     const savedLabel = i18n.t("chat.savedMessages");
     if (savedRowVisible(directoryInput.value, savedLabel)) {
@@ -301,6 +313,7 @@ export function createNewChatOverlay(deps: NewChatOverlayDeps): NewChatOverlay {
         self,
         text,
         search: deps.search,
+        ...(deps.avatarApi ? { avatarApi: deps.avatarApi } : {}),
         finishCreated,
         isClosed: () => closed,
         isBusy: () => busy,
