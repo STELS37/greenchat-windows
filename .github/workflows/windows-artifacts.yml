@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-node@v6
@@ -87,7 +87,7 @@ jobs:
             msvc_arch: amd64_arm64
     steps:
       - name: Check out exact public source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -326,7 +326,7 @@ jobs:
       actions: read
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v7
         with:
           pattern: GreenChat-windows-*-signed-${{ github.sha }}
