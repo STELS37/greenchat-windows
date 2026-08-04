@@ -41,10 +41,10 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22.22.0'
           cache: npm
@@ -108,7 +108,7 @@ jobs:
             msvc_arch: amd64_arm64
     steps:
       - name: Check out exact public source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -122,7 +122,7 @@ jobs:
 
           node scripts/check-public-boundary.mjs
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '22.22.0'
           cache: npm
@@ -145,7 +145,7 @@ jobs:
           key: ${{ matrix.rust_target }}
 
       - name: Cache pinned TDLib native build
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: var/build/tdlib
           key: tdlib-windows-${{ matrix.arch }}-${{ hashFiles('clients/third_party/tdlib/PINNED.env') }}
@@ -349,8 +349,8 @@ jobs:
       actions: read
       contents: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v7
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           pattern: GreenChat-windows-*-signed-${{ github.sha }}
           path: artifacts
