@@ -2,6 +2,7 @@
 // immediately; the image state machine is a lazy chunk so a broken network can never block the screen.
 import type { ApiLike } from "./api.ts";
 import type { MediaPort, UploadedFile } from "./media.ts";
+import { registerDomCleanup } from "../dom_disposal.ts";
 
 export type AvatarUploadPort = Pick<MediaPort, "upload">;
 
@@ -71,13 +72,17 @@ export function bindAvatarImage(
     await binding.set(fileId);
   };
   void set(initialFileId);
-  return {
+  let unregisterCleanup = () => {};
+  const binding: AvatarImageBinding = {
     set,
     destroy() {
       if (destroyed) return;
       destroyed = true;
       revision += 1;
+      unregisterCleanup();
       real?.destroy();
     },
   };
+  unregisterCleanup = registerDomCleanup(target, binding.destroy);
+  return binding;
 }

@@ -981,7 +981,7 @@ export function createFinanceScreen(deps: FinanceScreenDeps): {
               ]),
             ]),
             el("div", { class: "gc-market-price" }, [
-              el("strong", {}, [ticker?.last ? money(ticker.last) : "—"]),
+              el("strong", {}, [ticker?.last ?? ticker?.mid ? money((ticker.last ?? ticker.mid) as string) : "—"]),
               el("span", {}, [
                 ticker?.vol_quote_24h
                   ? `${i18n.t("finance.volume24h")} ${money(ticker.vol_quote_24h, 2)}`

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { bindAvatarImage, uploadAvatarFile } from "../src/screens/avatar_media.ts";
 import type { UploadedFile } from "../src/screens/media.ts";
+import { disposeDomTree } from "../src/dom_disposal.ts";
 import { installDomStub, settle, type StubNode } from "./dom_stub.ts";
 
 installDomStub();
@@ -196,4 +197,26 @@ test("a late signed URL for an old avatar cannot replace a newer loaded avatar",
   assert.equal(images.length, 1);
   assert.equal(images[0]?.getAttribute("src"), "/new-photo");
   binding.destroy();
+});
+
+
+test("discarding an avatar host releases its image binding without the screen keeping a handle", async () => {
+  installDomStub();
+  const target = document.createElement("div") as unknown as StubNode;
+  target.append("AE");
+  const api = {
+    get: async <T>() => ({ url: "/f/7?e=99&u=2&s=sig", expires_at: 99 }) as T,
+  };
+  bindAvatarImage(target as unknown as HTMLElement, api, 7, "Aero");
+  await settle();
+  const candidate = target.querySelector("img.gc-avatar-photo");
+  assert.ok(candidate);
+  candidate.dispatch("load");
+  await settle();
+  assert.equal(target.hasClass("has-image"), true);
+
+  disposeDomTree(target);
+  assert.equal(target.querySelector("img.gc-avatar-photo"), null);
+  assert.equal(target.hasClass("has-image"), false);
+  assert.equal(target.textContent, "AE", "the fallback initials survive row disposal");
 });

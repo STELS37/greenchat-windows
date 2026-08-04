@@ -35,6 +35,7 @@ export type CallEndReason =
   | "declined_local"
   | "declined_remote"
   | "busy"
+  | "answered_elsewhere"
   | "timeout"
   | "unavailable" // blocked, deleted or otherwise not reachable — deliberately one neutral reason
   | "not_allowed" // privacy key `calls` refused this caller
@@ -176,6 +177,9 @@ export interface CallSignalPort {
   // already failed, and saying so immediately beats a phantom ring.
   send(frame: Record<string, unknown>): boolean;
   subscribe(handler: (frame: Record<string, unknown>) => void): () => void;
+  // Volatile signaling cannot rely on durable replay. On a reconnect, the live controller rebinds its
+  // call_id to the new socket so the server can cancel the stale-line disconnect timer.
+  subscribeState?(handler: (state: string) => void): () => void;
 }
 
 export interface CallControllerDeps {
@@ -229,6 +233,7 @@ export class CallController {
   // (and its <video> tags) before the person accepts and the session is built.
   private videoTargets: { local: HTMLVideoElement | null; remote: HTMLVideoElement | null } | null = null;
   private unsubscribe: (() => void) | null = null;
+  private unsubscribeState: (() => void) | null = null;
   // Monotonic guard: an async media/SDP step that finishes after the call already ended must not
   // resurrect it.
   private epoch = 0;
@@ -236,6 +241,7 @@ export class CallController {
   constructor(deps: CallControllerDeps) {
     this.deps = deps;
     this.unsubscribe = deps.signal.subscribe((frame) => this.onFrame(frame));
+    this.unsubscribeState = deps.signal.subscribeState?.((state) => this.onSignalState(state)) ?? null;
   }
 
   get current(): CallState {
@@ -249,8 +255,15 @@ export class CallController {
   }
 
   destroy(): void {
+    // Account switch, logout and shell teardown are real call endings. Closing media without telling
+    // the server used to leave both participants stuck in `byUser`, causing the next call to say busy.
+    if (this.busy && this.state.callId) {
+      this.deps.signal.send({ type: "call.hangup", call_id: this.state.callId });
+    }
     this.unsubscribe?.();
     this.unsubscribe = null;
+    this.unsubscribeState?.();
+    this.unsubscribeState = null;
     this.clearLinger();
     this.clearRecovery();
     this.closeSession();
@@ -402,6 +415,24 @@ export class CallController {
     this.set({ ...IDLE_STATE });
   }
 
+  private onSignalState(state: string): void {
+    if (state === "open") {
+      if (this.busy && this.state.callId) {
+        if (this.deps.signal.send({ type: "call.resume", call_id: this.state.callId })) {
+          this.flushLocalIce();
+          if (this.state.phase === "reconnecting") this.retryRecovery();
+        }
+      }
+      return;
+    }
+    // An offer sent immediately before the socket closed has no call_id, therefore it cannot be
+    // resumed or safely matched after reconnect. End this narrow pre-ack state instead of playing a
+    // ringback forever. Calls with a call_id stay visible through the server's reconnect grace.
+    if (this.state.phase === "dialing" && !this.state.callId && !this.state.awaitingMedia) {
+      this.finish("offline");
+    }
+  }
+
   // ---- inbound frames -------------------------------------------------------------------------
 
   private onFrame(frame: Record<string, unknown>): void {
@@ -439,6 +470,10 @@ export class CallController {
       case "call.reject":
         if (!this.matches(frame)) return;
         this.finish(frame.busy === true ? "busy" : "declined_remote");
+        return;
+      case "call.taken":
+        if (!this.matches(frame) || this.state.direction !== "in") return;
+        this.finish("answered_elsewhere");
         return;
       case "call.hangup":
         if (!this.matches(frame)) return;
@@ -856,6 +891,8 @@ export function endReasonKey(state: CallState): string {
       return "call.endDeclined";
     case "busy":
       return "call.endBusy";
+    case "answered_elsewhere":
+      return "call.endAnsweredElsewhere";
     case "timeout":
       return "call.endNoAnswer";
     case "unavailable":
@@ -915,7 +952,7 @@ export function endRecovery(state: CallState): CallRecovery {
       // Retrying is guaranteed to fail while the other call is up: name the blocker instead.
       return { retry: false, hintKey: "call.hintAlreadyInCall" };
     default:
-      // Social outcomes (busy, no answer, declined, unavailable, hang-up) end here: the call log the
+      // Social outcomes (busy, answered elsewhere, no answer, declined, unavailable, hang-up) end here: the call log the
       // screen returns to carries the redial, and a second screen offering the same thing is noise.
       return { retry: false, hintKey: null };
   }

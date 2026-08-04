@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+    <parameter name="arch" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="GreenChat-${version}-windows-${arch}-setup.exe"
+             product-name="GreenChat"
+             product-version="${version}">
+      <authenticode-sign description="GreenChat" />
+    </pe-file>
+    <msi-file path="GreenChat-${version}-windows-${arch}.msi"
+              subject="GreenChat"
+              author="SignPath Foundation">
+      <authenticode-sign description="GreenChat" />
+    </msi-file>
+  </zip-file>
+</artifact-configuration>

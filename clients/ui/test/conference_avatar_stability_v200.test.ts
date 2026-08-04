@@ -109,7 +109,7 @@ test("V200: active-speaker updates keep the same loaded avatar nodes", async () 
   assert.ok(stageImageBefore);
   assert.ok(listImageBefore);
   const readsAfterLoad = api.signedUrlReads;
-  assert.equal(readsAfterLoad, 2, "stage and participant list each resolve the signed URL only once");
+  assert.equal(readsAfterLoad, 1, "stage and participant list share one signed-URL lookup for the same immutable file id");
 
   overlay.render(activeState(true));
   await settle();

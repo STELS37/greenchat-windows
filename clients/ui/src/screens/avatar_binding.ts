@@ -13,21 +13,106 @@ interface AvatarSource {
   invalidate?(): void;
 }
 
-function crossOriginHttpSource(src: string): boolean {
+interface SignedAvatarUrl {
+  url: string;
+  expires_at: number;
+}
+
+interface SignedAvatarLease extends SignedAvatarUrl {
+  generation: number;
+}
+
+type SignedUrlCacheEntry = {
+  generation: number;
+  value?: SignedAvatarLease;
+  pending?: Promise<SignedAvatarLease>;
+};
+
+// A single chat list can paint the same person in several surfaces, and rapid live-list paints may
+// briefly create overlapping bindings. Coalesce the signed-URL lookup per ApiLike instance so those
+// harmless UI lifecycles can never turn into hundreds of /v1/files/:id/url requests.
+let signedUrlCaches = new WeakMap<object, Map<number, SignedUrlCacheEntry>>();
+const SIGNED_URL_SKEW_SEC = 15;
+
+function signedUrlCache(api: object): Map<number, SignedUrlCacheEntry> {
+  let cache = signedUrlCaches.get(api);
+  if (!cache) {
+    cache = new Map();
+    signedUrlCaches.set(api, cache);
+  }
+  return cache;
+}
+
+function signedUrlStillValid(value: SignedAvatarUrl): boolean {
+  return Number.isFinite(value.expires_at) && value.expires_at > Math.floor(Date.now() / 1000) + SIGNED_URL_SKEW_SEC;
+}
+
+async function acquireSignedAvatarUrl(
+  api: Pick<ApiLike, "get" | "resolveUrl">,
+  fileId: number,
+  failedGeneration: number | null,
+): Promise<SignedAvatarLease> {
+  const cache = signedUrlCache(api as object);
+  const existing = cache.get(fileId);
+
+  // A retry refreshes only the generation that actually failed. If forty rows fail the same shared
+  // blob concurrently, the first row advances the generation and every other row joins that one
+  // refresh instead of deleting/restarting it (the production request storm's sharp edge).
+  if (failedGeneration !== null && existing && existing.generation !== failedGeneration) {
+    if (existing.value && signedUrlStillValid(existing.value)) return existing.value;
+    if (existing.pending) return existing.pending;
+  } else if (failedGeneration === null) {
+    if (existing?.value && signedUrlStillValid(existing.value)) return existing.value;
+    if (existing?.pending) return existing.pending;
+  }
+
+  const generation = (existing?.generation ?? 0) + 1;
+  const entry: SignedUrlCacheEntry = { generation };
+  const pending = api.get<SignedAvatarUrl>(`/v1/files/${fileId}/url`).then((value) => {
+    if (typeof value?.url !== "string" || !value.url.trim()) throw new Error("AVATAR_URL_REQUIRED");
+    const normalized: SignedAvatarLease = {
+      url: value.url.trim(),
+      expires_at: Number(value.expires_at),
+      generation,
+    };
+    if (cache.get(fileId) === entry) {
+      delete entry.pending;
+      entry.value = normalized;
+    }
+    return normalized;
+  }, (error: unknown) => {
+    if (cache.get(fileId) === entry) cache.delete(fileId);
+    throw error;
+  });
+  entry.pending = pending;
+  cache.set(fileId, entry);
+  return pending;
+}
+
+function httpAvatarSource(src: string): boolean {
   try {
     const here = globalThis.location;
     if (!here || typeof here.href !== "string" || !here.href) return false;
     const target = new URL(src, here.href);
-    return (target.protocol === "http:" || target.protocol === "https:") && target.origin !== here.origin;
+    return target.protocol === "http:" || target.protocol === "https:";
   } catch {
     return false;
   }
 }
 
 async function avatarSource(fileId: number, src: string, signal: AbortSignal): Promise<AvatarSource> {
-  if (!crossOriginHttpSource(src)) return { src, release() {} };
+  // Use the bounded blob cache on the web too. The file endpoint is intentionally `no-store`; feeding
+  // every recycled row directly into <img src=/f/...> therefore re-downloaded the same avatar and, in
+  // a render loop, exhausted the shared API bucket. One validated blob per file is both safer and much
+  // cheaper; initials remain the fallback if the fetch or decode fails.
+  if (!httpAvatarSource(src)) return { src, release() {} };
   const native = await import("./avatar_native.ts");
   return native.acquireNativeAvatar(fileId, src, signal);
+}
+
+/** Test-only reset for deterministic request-coalescing assertions. */
+export function resetAvatarBindingCacheForTests(): void {
+  signedUrlCaches = new WeakMap<object, Map<number, SignedUrlCacheEntry>>();
 }
 
 /** The heavy image/network state machine is lazy-loaded after initials are already paintable. */
@@ -132,11 +217,13 @@ export function createAvatarImageBinding(
       return;
     }
 
+    let signedGeneration: number | null = null;
     for (let attempt = 0; attempt < MAX_LOAD_ATTEMPTS; attempt += 1) {
       try {
-        const signed = await api.get<{ url: string; expires_at: number }>(`/v1/files/${fileId}/url`);
-        if (destroyed || mine !== generation || typeof signed.url !== "string" || !signed.url.trim()) return;
-        const candidate = await loadCandidate(fileId, resolvedUrl(signed.url.trim(), attempt));
+        const signed = await acquireSignedAvatarUrl(api, fileId, attempt > 0 ? signedGeneration : null);
+        signedGeneration = signed.generation;
+        if (destroyed || mine !== generation) return;
+        const candidate = await loadCandidate(fileId, resolvedUrl(signed.url, attempt));
         if (destroyed || mine !== generation) {
           candidate?.image.remove();
           candidate?.release();

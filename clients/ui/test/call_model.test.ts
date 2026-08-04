@@ -35,6 +35,7 @@ class Harness {
   restartOffers = 0;
   restartAnswers = 0;
   private handler: ((f: Frame) => void) | null = null;
+  private stateHandler: ((state: string) => void) | null = null;
   private timers: Array<{ fn: () => void; ms: number; id: number }> = [];
   private nextTimer = 1;
   clock = 1_000_000;
@@ -52,6 +53,10 @@ class Harness {
         subscribe(h) {
           self.handler = h;
           return () => { self.handler = null; };
+        },
+        subscribeState(h) {
+          self.stateHandler = h;
+          return () => { self.stateHandler = null; };
         },
       },
       media: {
@@ -88,6 +93,7 @@ class Harness {
   }
 
   deliver(frame: Frame): void { this.handler?.(frame); }
+  socketState(state: string): void { this.stateHandler?.(state); }
   runTimers(): void { const due = this.timers; this.timers = []; for (const t of due) t.fn(); }
   runTimer(ms: number): void {
     const at = this.timers.findIndex((timer) => timer.ms === ms);
@@ -289,6 +295,47 @@ test("V75: a second inbound call is refused as busy instead of stealing the scre
   h.deliver({ type: "call.incoming", call_id: "c10", from_user_id: 79, sdp: "SDP-2" });
   assert.equal(h.controller.current.callId, "c9", "the live call keeps the device");
   assert.deepEqual(h.sent, [{ type: "call.reject", call_id: "c10", busy: true }]);
+});
+
+test("V210: answering on one device stops the incoming call on sibling devices", () => {
+  const h = new Harness();
+  h.deliver({ type: "call.incoming", call_id: "c9", from_user_id: 77, sdp: "SDP-OFFER" });
+  h.deliver({ type: "call.taken", call_id: "c9" });
+  assert.equal(h.phase, "ended");
+  assert.equal(h.controller.current.reason, "answered_elsewhere");
+  assert.equal(endReasonKey(h.controller.current), "call.endAnsweredElsewhere");
+  assert.equal(h.controller.busy, false);
+});
+
+test("V210: a re-opened signaling socket rebinds the live call instead of leaving a stale busy line", async () => {
+  const h = new Harness();
+  await h.controller.place({ id: 78, name: "Пётр" }, false);
+  h.deliver({ type: "call.ringing", call_id: "c-resume" });
+  h.sent = [];
+  h.socketState("open");
+  assert.deepEqual(h.sent, [{ type: "call.resume", call_id: "c-resume" }]);
+  assert.equal(h.phase, "ringing", "rebind does not reset the visible call lifecycle");
+});
+
+test("V210: teardown tells the server to release an occupied line", async () => {
+  const h = new Harness();
+  await h.controller.place({ id: 78, name: "Пётр" }, false);
+  h.deliver({ type: "call.ringing", call_id: "c-destroy" });
+  h.sent = [];
+  h.controller.destroy();
+  assert.deepEqual(h.sent, [{ type: "call.hangup", call_id: "c-destroy" }]);
+  assert.equal(h.closed, 1);
+  h.controller.destroy();
+  assert.equal(h.sent.length, 1, "destroy remains idempotent");
+});
+
+test("V210: a socket loss before call.ringing cannot leave ringback playing forever", async () => {
+  const h = new Harness();
+  await h.controller.place({ id: 78, name: "Пётр" }, false);
+  assert.equal(h.phase, "dialing");
+  h.socketState("reconnecting");
+  assert.equal(h.phase, "ended");
+  assert.equal(h.controller.current.reason, "offline");
 });
 
 test("V75: ICE that arrives before the session exists is replayed, not dropped", async () => {

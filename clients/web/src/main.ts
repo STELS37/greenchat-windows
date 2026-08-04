@@ -1224,6 +1224,7 @@ async function boot(): Promise<void> {
   // listeners is declared BEFORE the engine so the engine can forward into it and the call
   // controller — built after the API/session exist — can subscribe to it.
   const callFrameListeners = new Set<(frame: Record<string, unknown>) => void>();
+  const callSocketStateListeners = new Set<(state: string) => void>();
 
   const sync = new SyncEngine({
     api,
@@ -1253,7 +1254,12 @@ async function boot(): Promise<void> {
     onCursor: (s) => { void cache.setCursor(s).catch(() => { /* locked */ }); },
     onAuthLost: () => onAuthLost(),
     // T-512 — WebSocket lifecycle breadcrumb (connect/open/reconnect/close). Routing-safe, PII-free.
-    onStateChange: (s) => { try { diagBuffer.ws(s); } catch { /* diag best-effort */ } },
+    onStateChange: (s) => {
+      try { diagBuffer.ws(s); } catch { /* diag best-effort */ }
+      for (const listener of [...callSocketStateListeners]) {
+        try { listener(s); } catch { /* a call listener can never break transport */ }
+      }
+    },
   });
 
   // Media substrate (T-407): the FileUploader (streamed PUT /v1/files with byte-accurate progress and
@@ -1524,6 +1530,12 @@ async function boot(): Promise<void> {
       subscribe: (handler) => {
         callFrameListeners.add(handler);
         return () => { callFrameListeners.delete(handler); };
+      },
+      subscribeState: (handler) => {
+        callSocketStateListeners.add(handler);
+        // Seed the controller with the current state; subsequent transitions come through SyncEngine.
+        handler(sync.getWsState());
+        return () => { callSocketStateListeners.delete(handler); };
       },
     },
     media: createBrowserCallMedia(),

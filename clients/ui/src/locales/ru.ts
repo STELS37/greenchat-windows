@@ -261,6 +261,7 @@ export const ru: Dict = {
   "call.endDeclined": "Абонент отклонил звонок",
   "call.endDeclinedByMe": "Вы отклонили звонок",
   "call.endBusy": "Абонент занят",
+  "call.endAnsweredElsewhere": "Ответили с другого устройства",
   "call.endNoAnswer": "Нет ответа",
   "call.endUnavailable": "Абонент недоступен",
   "call.endNotAllowed": "Абонент не принимает звонки от вас",

@@ -19,6 +19,7 @@ on:
         type: boolean
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -137,37 +138,44 @@ jobs:
           }
           if (-not (Test-Path (Join-Path $env:GC_VCPKG_ROOT 'vcpkg.exe'))) { throw 'vcpkg.exe is unavailable' }
 
-      - name: Build unsigned reproducible candidate
-        id: build
+      - name: Build unsigned application before bundling
+        id: build-app
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $out = Join-Path $env:RUNNER_TEMP 'greenchat-windows-build'
-          node scripts/build-windows-desktop.mjs --arch '${{ matrix.arch }}' --out $out --allow-unsigned
-          if ($LASTEXITCODE -ne 0) { throw "Windows build failed with exit code $LASTEXITCODE" }
-          $payload = Join-Path $env:RUNNER_TEMP 'signpath-input'
+          $out = Join-Path $env:RUNNER_TEMP 'greenchat-app-stage'
+          node scripts/build-windows-desktop.mjs `
+            --stage app `
+            --arch '${{ matrix.arch }}' `
+            --out $out `
+            --allow-unsigned
+          if ($LASTEXITCODE -ne 0) { throw "Windows app-stage build failed with exit code $LASTEXITCODE" }
+          $payload = Join-Path $env:RUNNER_TEMP 'signpath-app-input'
           & scripts/prepare-signpath-payload.ps1 `
             -BuildOutput $out `
-            -RustTarget '${{ matrix.rust_target }}' `
+            -Stage app `
             -Arch '${{ matrix.arch }}' `
             -OutputDirectory $payload
-          if ($LASTEXITCODE -ne 0) { throw "SignPath payload preparation failed with exit code $LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw "SignPath app payload preparation failed with exit code $LASTEXITCODE" }
           $version = [string](Get-Content config/client-release.json -Raw | ConvertFrom-Json).current_version
+          $candidate = Join-Path $payload "GreenChat-$version-windows-${{ matrix.arch }}-app.exe"
+          "build_output=$out" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "payload=$payload" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "candidate=$candidate" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      - name: Upload unsigned GitHub artifact for origin verification
-        id: upload-unsigned-artifact
+      - name: Upload unsigned app for SignPath origin verification
+        id: upload-app-artifact
         uses: actions/upload-artifact@v7
         with:
-          name: GreenChat-${{ matrix.id }}-unsigned-${{ github.sha }}
-          path: ${{ steps.build.outputs.payload }}
+          name: GreenChat-${{ matrix.id }}-unsigned-app-${{ github.sha }}
+          path: ${{ steps.build-app.outputs.payload }}
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
 
-      - name: Submit signing request to SignPath
-        id: signpath
+      - name: Sign application with SignPath Foundation
+        id: signpath-app
         if: vars.SIGNPATH_ENABLED == '1'
         uses: signpath/github-action-submit-signing-request@v2
         with:
@@ -175,20 +183,115 @@ jobs:
           organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
           project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
           signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
-          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}
-          github-artifact-id: ${{ steps.upload-unsigned-artifact.outputs.artifact-id }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_APP_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.upload-app-artifact.outputs.artifact-id }}
           wait-for-completion: true
-          output-artifact-directory: ${{ runner.temp }}\signpath-signed
+          output-artifact-directory: ${{ runner.temp }}\signpath-signed-app
           parameters: |
-            version: ${{ toJSON(steps.build.outputs.version) }}
+            version: ${{ toJSON(steps.build-app.outputs.version) }}
+            arch: ${{ toJSON(matrix.arch) }}
 
-      - name: Explain unsigned onboarding artifact
+      - name: Select app input for the installer stage
+        id: select-app
+        shell: pwsh
+        env:
+          SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
+          UNSIGNED_APP: ${{ steps.build-app.outputs.candidate }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($env:SIGNPATH_ENABLED -eq '1') {
+            $name = "GreenChat-${{ steps.build-app.outputs.version }}-windows-${{ matrix.arch }}-app.exe"
+            $matches = @(Get-ChildItem -Path (Join-Path $env:RUNNER_TEMP 'signpath-signed-app') -Recurse -File | Where-Object { $_.Name -eq $name })
+            if ($matches.Count -ne 1) { throw "expected exactly one SignPath app output, found $($matches.Count)" }
+            $app = $matches[0].FullName
+            $signature = Get-AuthenticodeSignature -LiteralPath $app
+            if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'SignPath Foundation' -or -not $signature.TimeStamperCertificate) {
+              throw 'SignPath application signature or timestamp is invalid'
+            }
+          } else {
+            $app = $env:UNSIGNED_APP
+          }
+          if (-not (Test-Path -LiteralPath $app -PathType Leaf)) { throw "selected app is absent: $app" }
+          "path=$app" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Bundle installers around the selected application
+        id: build-installers
+        shell: pwsh
+        env:
+          SIGNPATH_ENABLED: ${{ vars.SIGNPATH_ENABLED }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = Join-Path $env:RUNNER_TEMP 'greenchat-bundle-stage'
+          $args = @(
+            'scripts/build-windows-desktop.mjs',
+            '--stage', 'bundle',
+            '--arch', '${{ matrix.arch }}',
+            '--out', $out,
+            '--signed-binary', '${{ steps.select-app.outputs.path }}',
+            '--skip-web',
+            '--skip-checks',
+            '--skip-tdlib',
+            '--allow-unsigned'
+          )
+          if ($env:SIGNPATH_ENABLED -eq '1') { $args += '--require-input-signature' }
+          & node @args
+          if ($LASTEXITCODE -ne 0) { throw "Windows bundle stage failed with exit code $LASTEXITCODE" }
+          $payload = Join-Path $env:RUNNER_TEMP 'signpath-installer-input'
+          & scripts/prepare-signpath-payload.ps1 `
+            -BuildOutput $out `
+            -Stage installers `
+            -Arch '${{ matrix.arch }}' `
+            -OutputDirectory $payload
+          if ($LASTEXITCODE -ne 0) { throw "SignPath installer payload preparation failed with exit code $LASTEXITCODE" }
+          "build_output=$out" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "payload=$payload" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Upload unsigned installers for SignPath origin verification
+        id: upload-installer-artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: GreenChat-${{ matrix.id }}-unsigned-installers-${{ github.sha }}
+          path: ${{ steps.build-installers.outputs.payload }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Sign installers with SignPath Foundation
+        id: signpath-installers
+        if: vars.SIGNPATH_ENABLED == '1'
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG }}
+          github-artifact-id: ${{ steps.upload-installer-artifact.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: ${{ runner.temp }}\signpath-signed-installers
+          parameters: |
+            version: ${{ toJSON(steps.build-app.outputs.version) }}
+            arch: ${{ toJSON(matrix.arch) }}
+
+      - name: Explain unsigned onboarding artifacts
         if: vars.SIGNPATH_ENABLED != '1'
         shell: pwsh
         run: |
-          Write-Host 'SignPath onboarding is not enabled. The uploaded artifact is intentionally unsigned and must not be published as trusted.'
+          Write-Host 'SignPath onboarding is not enabled. The app and installer artifacts are intentionally unsigned and cannot be published as trusted.'
 
-      - name: Verify SignPath publisher and assemble release
+      - name: Upload unsigned two-stage onboarding candidate
+        if: vars.SIGNPATH_ENABLED != '1'
+        uses: actions/upload-artifact@v7
+        with:
+          name: GreenChat-${{ matrix.id }}-two-stage-unsigned-${{ github.sha }}
+          path: |
+            ${{ steps.build-app.outputs.payload }}
+            ${{ steps.build-installers.outputs.build_output }}\${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Verify both SignPath stages and assemble release
         id: finalize
         if: vars.SIGNPATH_ENABLED == '1'
         shell: pwsh
@@ -196,9 +299,12 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $out = Join-Path $env:RUNNER_TEMP 'greenchat-signed-release'
           & scripts/finalize-signpath-release.ps1 `
-            -SignedDirectory (Join-Path $env:RUNNER_TEMP 'signpath-signed') `
+            -SignedAppDirectory (Join-Path $env:RUNNER_TEMP 'signpath-signed-app') `
+            -SignedInstallerDirectory (Join-Path $env:RUNNER_TEMP 'signpath-signed-installers') `
+            -BundleOutput '${{ steps.build-installers.outputs.build_output }}' `
             -Arch '${{ matrix.arch }}' `
             -OutputDirectory $out
+          if ($LASTEXITCODE -ne 0) { throw "Signed release finalization failed with exit code $LASTEXITCODE" }
           "release=$out" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
       - name: Upload verified signed release candidate
@@ -217,6 +323,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 15
     permissions:
+      actions: read
       contents: write
     steps:
       - uses: actions/checkout@v6

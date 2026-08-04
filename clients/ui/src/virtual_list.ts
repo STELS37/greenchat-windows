@@ -3,6 +3,7 @@
 // a pure function (computeWindow — unit-tested in node); the DOM binder (VirtualList) is a thin,
 // lazily-constructed layer that renders only the visible window into an absolutely-offset viewport.
 // DOM is touched only inside the class, never at import time, so the module loads under node:test.
+import { disposeDomTree } from "./dom_disposal.ts";
 
 export interface WindowInput {
   scrollTop: number;
@@ -64,6 +65,9 @@ export interface VirtualListOptions<T> {
   overscan?: number;
   // Keep the view pinned to the bottom when new items arrive (message-feed behaviour).
   stickToBottom?: boolean;
+  // Rows that leave the viewport stay decoded in a bounded LRU. Scrolling back therefore reuses the
+  // same DOM/image instead of flashing initials and requesting the signed avatar again.
+  cacheLimit?: number;
 }
 
 // Thin DOM binder. Structure: container (scroll box) → sizer (full height) → slab (translated window).
@@ -76,6 +80,14 @@ export class VirtualList<T> {
   private readonly overscan: number;
   private readonly renderItem: (item: T, index: number) => HTMLElement;
   private readonly stickToBottom: boolean;
+  private readonly cacheLimit: number;
+  private readonly nodeCache = new Map<number, { item: T; node: HTMLElement }>();
+  private itemsRevision = 0;
+  private renderedRevision = -1;
+  private renderedStart = 0;
+  private renderedEnd = -1;
+  private renderedOffsetY = 0;
+  private renderedItemHeight = 0;
   private items: T[] = [];
   private rafPending = false;
   private readonly onScroll: () => void;
@@ -93,6 +105,7 @@ export class VirtualList<T> {
     this.overscan = options.overscan ?? 3;
     this.renderItem = options.renderItem;
     this.stickToBottom = options.stickToBottom ?? false;
+    this.cacheLimit = Math.max(0, Math.floor(options.cacheLimit ?? 96));
 
     this.container.style.overflowY = "auto";
     this.container.style.position = "relative";
@@ -144,9 +157,48 @@ export class VirtualList<T> {
     return this.itemHeight;
   }
 
+  private disposeCachedRows(): void {
+    for (const cached of this.nodeCache.values()) disposeDomTree(cached.node);
+    this.nodeCache.clear();
+  }
+
+  private rowNode(item: T, index: number): HTMLElement {
+    const cached = this.nodeCache.get(index);
+    if (cached?.item === item) {
+      // Refresh insertion order: Map is the LRU list, oldest first.
+      this.nodeCache.delete(index);
+      this.nodeCache.set(index, cached);
+      return cached.node;
+    }
+    if (cached) disposeDomTree(cached.node);
+    const node = this.renderItem(item, index);
+    this.nodeCache.set(index, { item, node });
+    return node;
+  }
+
+  private trimCache(visibleStart: number, visibleEnd: number): void {
+    while (this.nodeCache.size > this.cacheLimit) {
+      let removed = false;
+      for (const [index, cached] of this.nodeCache) {
+        if (index >= visibleStart && index <= visibleEnd) continue;
+        this.nodeCache.delete(index);
+        disposeDomTree(cached.node);
+        removed = true;
+        break;
+      }
+      // The visible window itself may be larger than the configured limit; visible rows always win.
+      if (!removed) break;
+    }
+  }
+
   setItems(items: T[]): void {
     const wasAtBottom = this.stickToBottom && this.isNearBottom();
+    // A content refresh can change titles, badges, ordering and handlers even when an index is reused.
+    // Cache only across scroll renders of one immutable item snapshot, never across setItems().
+    this.disposeCachedRows();
     this.items = items;
+    this.itemsRevision += 1;
+    this.renderedRevision = -1;
     this.render();
     if (wasAtBottom) this.scrollToBottom();
   }
@@ -202,17 +254,32 @@ export class VirtualList<T> {
       overscan: this.overscan,
     });
     this.sizer.style.height = `${range.totalHeight}px`;
-    const doc = this.container.ownerDocument;
-    const frag = doc.createDocumentFragment();
-    for (let i = range.startIndex; i <= range.endIndex; i++) {
-      const item = this.items[i];
-      if (item === undefined) continue;
-      const node = this.renderItem(item, i);
-      node.style.height = `${this.itemHeight}px`;
-      frag.appendChild(node);
-    }
     this.slab.style.transform = `translateY(${range.offsetY}px)`;
-    this.slab.replaceChildren(frag);
+    const sameWindow =
+      viewportHeight > 0 &&
+      this.renderedRevision === this.itemsRevision &&
+      this.renderedStart === range.startIndex &&
+      this.renderedEnd === range.endIndex &&
+      this.renderedOffsetY === range.offsetY &&
+      this.renderedItemHeight === this.itemHeight;
+    if (!sameWindow) {
+      const doc = this.container.ownerDocument;
+      const frag = doc.createDocumentFragment();
+      for (let i = range.startIndex; i <= range.endIndex; i++) {
+        const item = this.items[i];
+        if (item === undefined) continue;
+        const node = this.rowNode(item, i);
+        node.style.height = `${this.itemHeight}px`;
+        frag.appendChild(node);
+      }
+      this.slab.replaceChildren(frag);
+      this.renderedRevision = this.itemsRevision;
+      this.renderedStart = range.startIndex;
+      this.renderedEnd = range.endIndex;
+      this.renderedOffsetY = range.offsetY;
+      this.renderedItemHeight = this.itemHeight;
+      this.trimCache(range.startIndex, range.endIndex);
+    }
 
     if (viewportHeight <= 0 && this.items.length > 0) {
       // Zero-height render: nothing was drawn even though items exist. Remember that a heal is due
@@ -237,6 +304,7 @@ export class VirtualList<T> {
   destroy(): void {
     this.resizeObserver?.disconnect();
     this.container.removeEventListener("scroll", this.onScroll);
+    this.disposeCachedRows();
     this.container.replaceChildren();
   }
 }

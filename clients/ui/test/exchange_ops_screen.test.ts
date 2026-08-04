@@ -73,7 +73,7 @@ const WALLET: WalletResult = {
 };
 
 const TICKER = {
-  pair: PAIR.id, last: "101500000000", high_24h: "102000000000", low_24h: "99000000000",
+  pair: PAIR.id, last: "101500000000", mid: "101450000000", high_24h: "102000000000", low_24h: "99000000000",
   vol_base_24h: "3500000000", vol_quote_24h: "355250000000",
 };
 

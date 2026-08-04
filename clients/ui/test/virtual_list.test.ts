@@ -135,3 +135,61 @@ test("VirtualList: heal keeps a stick-to-bottom feed pinned to the newest item",
   assert.equal(container.scrollTop, container.scrollHeight, "view is pinned to the bottom");
   vl.destroy();
 });
+
+
+test("VirtualList: scroll away and back reuses decoded row DOM instead of repainting avatars", () => {
+  const container = new StubElement();
+  container.clientHeight = 40;
+  const renders = new Map<number, number>();
+  const vl = new VirtualList<number>({
+    container: asEl(container),
+    itemHeight: 20,
+    overscan: 0,
+    cacheLimit: 32,
+    renderItem: (value, index) => {
+      renders.set(index, (renders.get(index) ?? 0) + 1);
+      const row = stubDocument.createElement("div") as StubElement & { decoded?: string };
+      row.decoded = `avatar-${value}`;
+      return asEl(row);
+    },
+  });
+  vl.setItems(Array.from({ length: 12 }, (_value, index) => index));
+  const slab = container.children[0]!.children[0]!;
+  const first = slab.children[0] as StubElement & { decoded?: string };
+
+  vl.scrollToOffset(100);
+  assert.notEqual(slab.children[0], first, "the top row leaves the rendered window");
+  vl.scrollToOffset(0);
+
+  assert.equal(slab.children[0], first, "returning to the top reattaches the exact decoded row node");
+  assert.equal((slab.children[0] as StubElement & { decoded?: string }).decoded, "avatar-0");
+  assert.equal(renders.get(0), 1, "the avatar row is not rebuilt or re-requested");
+
+  const sameWindow = [...slab.children];
+  vl.scrollToOffset(5);
+  assert.deepEqual(slab.children, sameWindow, "pixel scrolling inside one window does not replace its DOM");
+  assert.equal(renders.get(0), 1);
+  vl.destroy();
+});
+
+test("VirtualList: replacing items and destroying the list releases row-owned resources", async () => {
+  const { registerDomCleanup } = await import("../src/dom_disposal.ts");
+  const container = new StubElement();
+  container.clientHeight = 100;
+  let disposed = 0;
+  const vl = new VirtualList<number>({
+    container: asEl(container),
+    itemHeight: 20,
+    renderItem: () => {
+      const row = stubDocument.createElement("div");
+      registerDomCleanup(row, () => { disposed += 1; });
+      return asEl(row);
+    },
+  });
+
+  vl.setItems([1, 2]);
+  vl.setItems([3]);
+  assert.equal(disposed, 2, "a content snapshot replacement disposes its detached rows");
+  vl.destroy();
+  assert.equal(disposed, 3, "destroy releases the final rendered row exactly once");
+});

@@ -115,6 +115,8 @@ export interface ExPairRow {
 export interface ExTickerRow {
   pair: string;
   last: string | null;
+  /** Midpoint of the best bid/ask; the price to show while a quoted market has never traded. */
+  mid: string | null;
   high_24h: string | null;
   low_24h: string | null;
   vol_base_24h: string;

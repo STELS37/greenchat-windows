@@ -7,6 +7,7 @@ This repository intentionally contains **client code only**. GreenChat server, p
 ## Current status
 
 - License: [GNU AGPL-3.0-or-later](LICENSE)
+- Original artwork and call sounds: [`ASSET_LICENSES.md`](ASSET_LICENSES.md)
 - Supported Windows architectures: x64 and ARM64
 - Installer formats: NSIS EXE and MSI
 - Source import: see [`UPSTREAM_COMMIT`](UPSTREAM_COMMIT) and [`EXPORT_PROVENANCE.txt`](EXPORT_PROVENANCE.txt)
@@ -33,6 +34,7 @@ node scripts/build-windows-desktop.mjs --arch x64 --allow-unsigned --out $env:RU
 ```
 
 The canonical GitHub-hosted build is defined in [`.github/workflows/windows-artifacts.yml`](.github/workflows/windows-artifacts.yml). A release submitted to SignPath is always built from a public commit by GitHub-hosted runners.
+The release uses two signing requests: first the bare GreenChat application is signed, then Tauri creates NSIS/MSI around that exact signed EXE and the installer containers are signed separately. This ensures the installed application is trusted, not only the outer installer.
 
 ## Repository scope
 

@@ -1,6 +1,7 @@
 # Third-party components
 
 GreenChat for Windows is distributed under AGPL-3.0-or-later and uses open-source dependencies recorded in committed lockfiles.
+Original GreenChat artwork and audio are covered separately in [`ASSET_LICENSES.md`](ASSET_LICENSES.md); they are not third-party dependencies.
 
 ## JavaScript and TypeScript
 

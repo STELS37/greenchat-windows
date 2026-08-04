@@ -259,12 +259,13 @@ test("V152: closing chat info returns the keyboard to the header that opened it"
     i18n,
     title: "Ann",
     subtitle: "@ann",
-    chatId: 1,
-    isGroup: false,
-    detail: () => Promise.resolve({ chat: { id: 1, kind: "dialog", title: "Ann" }, members: [] } as unknown as never),
-    profile: () => Promise.resolve(null as unknown as never),
+    kind: "dialog",
+    peerId: 7,
+    members: [],
+    loadChat: () => Promise.resolve({ kind: "dialog", title: "Ann" }),
+    loadUser: () => Promise.resolve({ username: "ann", name: "Ann" }),
     onClose: () => {},
-  } as never);
+  });
   body.append(overlay.root as unknown as StubNode);
   overlay.focus();
   await settle();

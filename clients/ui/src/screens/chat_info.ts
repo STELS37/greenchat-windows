@@ -55,7 +55,8 @@ export interface ChatInfoDeps {
   subtitle: string;
   kind: string;
   peerId: number | null;
-  members: ChatMember[];
+  /** Initial roster snapshot. Legacy/dialog callers may omit it; async enrichment still works. */
+  members?: ChatMember[];
   loadChat(): Promise<ChatInfoDetail>;
   loadUser(userId: number): Promise<ChatInfoProfile>;
   onOpenMember?(userId: number): void;
@@ -93,7 +94,7 @@ export function createChatInfoOverlay(deps: ChatInfoDeps): ChatInfoOverlay {
   const { i18n } = deps;
   let closed = false;
   let detail: ChatInfoDetail | null = null;
-  let members: ChatMember[] = deps.members.map((member) => member.rights
+  let members: ChatMember[] = (deps.members ?? []).map((member) => member.rights
     ? { ...member, rights: { ...member.rights } }
     : { ...member });
   let heroBinding: AvatarImageBinding | null = null;

@@ -144,7 +144,7 @@ export function openPair(deps: ExchangeOpsDeps, pair: ExPairRow, wallet: WalletR
     const cell = (label: string, value: string): HTMLElement =>
       el("div", { class: "gc-ex-stat" }, [el("span", {}, [label]), el("strong", {}, [value])]);
     stats.append(
-      cell(i18n.t("finance.lastPrice"), ticker.last ? money(ticker.last) : "—"),
+      cell(i18n.t("finance.lastPrice"), ticker.last ?? ticker.mid ? money((ticker.last ?? ticker.mid) as string) : "—"),
       cell(i18n.t("finance.change24h"), changeText(changeBp)),
       cell(i18n.t("finance.high24h"), ticker.high_24h ? money(ticker.high_24h) : "—"),
       cell(i18n.t("finance.low24h"), ticker.low_24h ? money(ticker.low_24h) : "—"),

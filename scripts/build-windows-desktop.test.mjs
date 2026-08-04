@@ -15,6 +15,7 @@ import {
   peMachine,
   sourceContracts,
   tdlibBuildPlan,
+  tauriStagePlan,
   windowsArch,
   windowsPowerShellEnvironment,
   windowsPowerShellModulePath,
@@ -65,6 +66,7 @@ test("Windows x64 and ARM64 use deterministic independent targets and filenames"
     peMachine: 0xaa64,
   });
   assert.deepEqual(artifactNames("1.2.3", windowsArch("x64")), {
+    app: "GreenChat-1.2.3-windows-x64-app.exe",
     setup: "GreenChat-1.2.3-windows-x64-setup.exe",
     msi: "GreenChat-1.2.3-windows-x64.msi",
     portable: "GreenChat-1.2.3-windows-x64-portable.zip",
@@ -73,6 +75,19 @@ test("Windows x64 and ARM64 use deterministic independent targets and filenames"
     manifest: "windows-x64-release.json",
     checksums: "SHA256SUMS-windows-x64.txt",
   });
+});
+
+test("two-stage SignPath build signs the app before bundle-only installers", () => {
+  const arch = windowsArch("arm64");
+  assert.deepEqual(tauriStagePlan("app", arch, "C:/overlay.json"), {
+    command: "build",
+    args: ["build", "--target", "aarch64-pc-windows-msvc", "--no-bundle", "--no-sign", "--config", "C:/overlay.json"],
+  });
+  assert.deepEqual(tauriStagePlan("bundle", arch, "C:/overlay.json"), {
+    command: "bundle",
+    args: ["bundle", "--target", "aarch64-pc-windows-msvc", "--bundles", "nsis,msi", "--no-sign", "--config", "C:/overlay.json"],
+  });
+  assert.throws(() => tauriStagePlan("unknown", arch, "C:/overlay.json"), /unknown Windows build stage/);
 });
 
 test("ARM64 TDLib runs native generators before a true cross-compile", () => {
@@ -93,6 +108,7 @@ test("ARM64 TDLib runs native generators before a true cross-compile", () => {
   assert.deepEqual(arm64.native.configure.slice(4, 6), ["-A", "x64"]);
   assert.ok(arm64.native.configure.includes("-DTD_GENERATE_SOURCE_FILES=ON"));
   assert.ok(arm64.native.build.includes("prepare_cross_compiling"));
+  assert.ok(arm64.target.configure.includes("-A"));
   assert.ok(arm64.target.configure.includes("ARM64"));
   assert.ok(arm64.target.configure.includes("-DCMAKE_SYSTEM_NAME=Windows"));
   assert.ok(arm64.target.configure.includes("-DCMAKE_SYSTEM_PROCESSOR=ARM64"));
@@ -211,22 +227,29 @@ test("Windows installed application creates a recognisable independent session a
   assert.equal(storage.values.has("gc.session"), false, "refresh token must not remain in WebView localStorage");
 });
 
-test("public workflow keeps unsigned builds separate and signs only GitHub-hosted artifacts", () => {
+test("public workflow signs the app before bundle-only installers", () => {
   const workflow = source(".github/workflows/windows-artifacts.yml");
-  const unsignedIndex = workflow.indexOf("Build unsigned reproducible candidate");
-  const uploadIndex = workflow.indexOf("Upload unsigned GitHub artifact for origin verification");
-  const signIndex = workflow.indexOf("Submit signing request to SignPath");
-  const verifyIndex = workflow.indexOf("Verify SignPath publisher and assemble release");
-  const publishIndex = workflow.indexOf("publish-release:");
+  const appBuild = workflow.indexOf("Build unsigned application before bundling");
+  const appUpload = workflow.indexOf("Upload unsigned app for SignPath origin verification");
+  const appSign = workflow.indexOf("Sign application with SignPath Foundation");
+  const bundleBuild = workflow.indexOf("Bundle installers around the selected application");
+  const installerUpload = workflow.indexOf("Upload unsigned installers for SignPath origin verification");
+  const installerSign = workflow.indexOf("Sign installers with SignPath Foundation");
+  const verify = workflow.indexOf("Verify both SignPath stages and assemble release");
+  const publish = workflow.indexOf("publish-release:");
 
   assert.match(workflow, /source-validation:[\s\S]*runs-on: ubuntu-22\.04/);
-  assert.match(workflow, /build-unsigned:[\s\S]*runs-on: windows-latest[\s\S]*--allow-unsigned/);
-  assert.match(workflow, /windows-x64/);
-  assert.match(workflow, /windows-arm64/);
-  assert.match(workflow, /signpath\/github-action-submit-signing-request@v2/);
-  assert.match(workflow, /api-token: \$\{\{ secrets\.SIGNPATH_API_TOKEN \}\}/);
-  assert.match(workflow, /github-artifact-id: \$\{\{ steps\.upload-unsigned-artifact\.outputs\.artifact-id \}\}/);
-  assert.match(workflow, /if: vars\.SIGNPATH_ENABLED == '1'/);
+  assert.match(workflow, /build-unsigned:[\s\S]*runs-on: windows-latest/);
+  assert.match(workflow, /--stage app/);
+  assert.match(workflow, /'--stage', 'bundle'/);
+  assert.match(workflow, /'--signed-binary'/);
+  assert.match(workflow, /--require-input-signature/);
+  assert.equal((workflow.match(/signpath\/github-action-submit-signing-request@v2/g) ?? []).length, 2);
+  assert.match(workflow, /SIGNPATH_APP_ARTIFACT_CONFIGURATION_SLUG/);
+  assert.match(workflow, /SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG/);
+  assert.match(workflow, /github-artifact-id: \$\{\{ steps\.upload-app-artifact\.outputs\.artifact-id \}\}/);
+  assert.match(workflow, /github-artifact-id: \$\{\{ steps\.upload-installer-artifact\.outputs\.artifact-id \}\}/);
+  assert.match(workflow, /actions: read/);
   assert.match(workflow, /publish_release && vars\.SIGNPATH_ENABLED == '1'/);
   assert.match(workflow, /actions\/upload-artifact@v7/);
   assert.match(workflow, /actions\/download-artifact@v7/);
@@ -236,24 +259,15 @@ test("public workflow keeps unsigned builds separate and signs only GitHub-hoste
   assert.doesNotMatch(workflow, /runs-on:\s*\[[^\]]*self-hosted/i);
   assert.doesNotMatch(workflow, /WINDOWS_CERTIFICATE/);
   assert.doesNotMatch(workflow, /TAURI_SIGNING_PRIVATE_KEY/);
-  assert.ok(unsignedIndex >= 0 && unsignedIndex < uploadIndex && uploadIndex < signIndex && signIndex < verifyIndex && verifyIndex < publishIndex);
+  assert.ok(appBuild >= 0 && appBuild < appUpload && appUpload < appSign && appSign < bundleBuild && bundleBuild < installerUpload && installerUpload < installerSign && installerSign < verify && verify < publish);
 
   const factory = source("scripts/build-windows-desktop.mjs");
-  assert.match(factory, /runTauri\(tauriArgs/);
+  assert.match(factory, /runTauri\(plan\.args/);
+  assert.match(factory, /embedded_app/);
   assert.match(factory, /process\.env\.GC_VCPKG_ROOT/);
   assert.match(factory, /function runNpm/);
   assert.match(factory, /function runTauri/);
-  assert.match(factory, /runCommandScript\("tauri\.cmd"/);
-  assert.match(factory, /process\.env\.SystemRoot/);
-  assert.match(factory, /run\(commandProcessor, \["\/d", "\/c", "call", script/);
-  assert.match(factory, /runCommandScript\("npm\.cmd"/);
-  assert.match(factory, /ComSpec: commandProcessor, COMSPEC: commandProcessor/);
-  assert.doesNotMatch(factory, /run\("npm\.cmd"/);
-  assert.doesNotMatch(factory, /process\.env\.(?:ComSpec|COMSPEC)/);
-  assert.ok(factory.indexOf('runNpm(["ci"]') < factory.indexOf("const tdlib = ensurePinnedTdlib"));
-  assert.match(factory, /failed \(\$\{failure\}\)/);
 });
-
 test("every PNG frame inside the Windows app icon is 8-bit, which is all the ICO reader accepts", () => {
   // Regression guard for the 2026-08-04 Windows worker failure. `tauri::generate_context!` reads
   // clients/desktop/src-tauri/icons/icon.ico through the `ico` crate, whose src/image.rs rejects

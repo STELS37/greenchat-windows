@@ -187,6 +187,7 @@ export function tdlibBuildPlan(arch, { sourceRoot, binaryRoot, toolchain }) {
 
 export function artifactNames(version, arch) {
   return {
+    app: `GreenChat-${version}-windows-${arch.package}-app.exe`,
     setup: `GreenChat-${version}-windows-${arch.package}-setup.exe`,
     msi: `GreenChat-${version}-windows-${arch.package}.msi`,
     portable: `GreenChat-${version}-windows-${arch.package}-portable.zip`,
@@ -195,6 +196,28 @@ export function artifactNames(version, arch) {
     manifest: `windows-${arch.package}-release.json`,
     checksums: `SHA256SUMS-windows-${arch.package}.txt`,
   };
+}
+
+export function tauriStagePlan(stage, arch, configPath) {
+  if (stage === "app") {
+    return {
+      command: "build",
+      args: ["build", "--target", arch.rustTarget, "--no-bundle", "--no-sign", "--config", configPath],
+    };
+  }
+  if (stage === "bundle") {
+    return {
+      command: "bundle",
+      args: ["bundle", "--target", arch.rustTarget, "--bundles", "nsis,msi", "--no-sign", "--config", configPath],
+    };
+  }
+  if (stage === "full") {
+    return {
+      command: "build",
+      args: ["build", "--target", arch.rustTarget, "--bundles", "nsis,msi", "--config", configPath],
+    };
+  }
+  fail(`unknown Windows build stage ${stage}`);
 }
 
 // Windows Installer will not accept the application's own semver. Measured on the Windows worker on
@@ -324,6 +347,9 @@ function parseArgs(argv) {
     allowUnsigned: false,
     skipRuntimeSmoke: false,
     selfCheck: false,
+    stage: "full",
+    signedBinary: "",
+    requireInputSignature: false,
   };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -337,11 +363,18 @@ function parseArgs(argv) {
     else if (arg === "--allow-unsigned") options.allowUnsigned = true;
     else if (arg === "--skip-runtime-smoke") options.skipRuntimeSmoke = true;
     else if (arg === "--self-check") options.selfCheck = true;
+    else if (arg === "--stage") options.stage = String(argv[++i] ?? "").trim().toLowerCase();
+    else if (arg === "--signed-binary") options.signedBinary = resolve(String(argv[++i] ?? ""));
+    else if (arg === "--require-input-signature") options.requireInputSignature = true;
     else if (arg === "--help") {
-      console.log("Usage: node scripts/build-windows-desktop.mjs [--out DIR] [--arch x64|arm64] [--skip-web] [--skip-checks] [--skip-tdlib] [--reuse-bundles] [--allow-dirty] [--allow-unsigned] [--skip-runtime-smoke] [--self-check]");
+      console.log("Usage: node scripts/build-windows-desktop.mjs [--out DIR] [--arch x64|arm64] [--stage full|app|bundle] [--signed-binary FILE] [--require-input-signature] [--skip-web] [--skip-checks] [--skip-tdlib] [--reuse-bundles] [--allow-dirty] [--allow-unsigned] [--skip-runtime-smoke] [--self-check]");
       process.exit(0);
     } else fail(`unknown argument ${arg}`);
   }
+  if (!["full", "app", "bundle"].includes(options.stage)) fail(`unknown Windows build stage ${options.stage}`);
+  if (options.stage === "bundle" && !options.signedBinary) fail("--stage bundle requires --signed-binary");
+  if (options.stage !== "bundle" && options.signedBinary) fail("--signed-binary is valid only with --stage bundle");
+  if (options.requireInputSignature && options.stage !== "bundle") fail("--require-input-signature is valid only with --stage bundle");
   return options;
 }
 
@@ -677,10 +710,11 @@ function buildWindows(options) {
   const expectedSha = String(process.env.GC_SOURCE_SHA || "").trim();
   if (expectedSha && expectedSha !== state.sha) fail(`HEAD ${state.sha} does not match GC_SOURCE_SHA ${expectedSha}`);
   if (state.dirty && !options.allowDirty) fail("Git tree is dirty; production artifacts require an exact source snapshot");
-  if (!process.env.TAURI_SIGNING_PRIVATE_KEY && !options.allowUnsigned) {
+  const externalStage = options.stage !== "full";
+  if (!externalStage && !process.env.TAURI_SIGNING_PRIVATE_KEY && !options.allowUnsigned) {
     fail("TAURI_SIGNING_PRIVATE_KEY is mandatory for signed updater artifacts");
   }
-  const thumbprint = resolveSigningCertificate(options.allowUnsigned);
+  const thumbprint = externalStage ? "" : resolveSigningCertificate(options.allowUnsigned);
   run("rustup.exe", ["target", "add", options.arch.rustTarget]);
 
   // Fail fast on the JavaScript dependency graph before spending close to an hour compiling TDLib.
@@ -699,15 +733,22 @@ function buildWindows(options) {
     run("rustup.exe", ["run", "stable", "cargo", rustGate, "--quiet", "--target", options.arch.rustTarget], { cwd: tauriRoot });
   }
 
-  const signing = writeSigningOverlay(thumbprint, options.allowUnsigned, version);
+  const targetRoot = join(tauriRoot, "target", options.arch.rustTarget, "release");
+  const targetBinary = join(targetRoot, "green-chat-desktop.exe");
+  if (options.stage === "bundle") {
+    if (!existsSync(options.signedBinary)) fail(`signed application input is absent: ${options.signedBinary}`);
+    if (peMachine(readFileSync(options.signedBinary)) !== options.arch.peMachine) {
+      fail(`${basename(options.signedBinary)} has the wrong PE architecture`);
+    }
+    mkdirSync(targetRoot, { recursive: true });
+    copyFileSync(options.signedBinary, targetBinary);
+    rmSync(join(targetRoot, "bundle"), { recursive: true, force: true });
+  }
+
+  const signing = writeSigningOverlay(thumbprint, options.allowUnsigned || externalStage, version);
   try {
-    const tauriArgs = [
-      "build",
-      "--target", options.arch.rustTarget,
-      "--bundles", "nsis,msi",
-      "--config", signing.path,
-    ];
-    runTauri(tauriArgs, {
+    const plan = tauriStagePlan(options.stage, options.arch, signing.path);
+    runTauri(plan.args, {
       cwd: desktopRoot,
       env: {
         GC_SERVER: process.env.GC_SERVER || CANONICAL_SERVER_ORIGIN,
@@ -719,22 +760,47 @@ function buildWindows(options) {
     rmSync(signing.temp, { recursive: true, force: true });
   }
 
-  const targetRoot = join(tauriRoot, "target", options.arch.rustTarget, "release");
   const files = walk(targetRoot);
   const setup = newest(files.filter((path) => /-setup\.exe$/i.test(path) && path.includes(`${join("bundle", "nsis")}`)));
   const msi = newest(files.filter((path) => /\.msi$/i.test(path) && path.includes(`${join("bundle", "msi")}`)));
   const binary = newest(files.filter((path) => basename(path).toLowerCase() === "green-chat-desktop.exe" && dirname(path) === targetRoot));
   const updater = newest(files.filter((path) => /\.nsis\.zip$/i.test(path)));
-  if (!setup || !msi || !binary || (!options.allowUnsigned && !updater)) {
-    fail("Tauri did not produce the expected EXE, MSI, binary and signed updater archive");
-  }
+  if (!binary) fail("Tauri did not produce the expected GreenChat application executable");
   if (peMachine(readFileSync(binary)) !== options.arch.peMachine) {
     fail(`${basename(binary)} has the wrong PE architecture`);
   }
+  if (options.stage === "app") {
+    const appSignature = verifyAuthenticode(binary, true);
+    runtimeSmoke(binary, options.arch, options.skipRuntimeSmoke);
+    const names = artifactNames(version, options.arch);
+    const out = resolve(options.out, options.arch.package);
+    mkdirSync(out, { recursive: true });
+    const appPath = join(out, names.app);
+    copyImmutable(binary, appPath);
+    const file = { name: basename(appPath), bytes: statSync(appPath).size, sha256: sha256(appPath) };
+    writeFileSync(join(out, `windows-${options.arch.package}-app-stage.json`), `${JSON.stringify({
+      schema_version: 1,
+      stage: "app",
+      version,
+      source_sha: state.sha,
+      architecture: options.arch.public,
+      rust_target: options.arch.rustTarget,
+      signed: appSignature.Status === "Valid",
+      authenticode: appSignature,
+      tdlib: { version: tdlib.version ?? parsePinnedEnv().TDLIB_EXPECTED_VERSION, bytes: tdlib.bytes, sha256: tdlib.sha256 },
+      file,
+    }, null, 2)}\n`);
+    writeFileSync(join(out, `SHA256SUMS-windows-${options.arch.package}-app.txt`), `${file.sha256}  ${file.name}\n`);
+    console.log(`WINDOWS-DESKTOP-APP: OK ${out}`);
+    return;
+  }
+  if (!setup || !msi || (!externalStage && !options.allowUnsigned && !updater)) {
+    fail("Tauri did not produce the expected EXE, MSI and required updater archive");
+  }
   const signatures = {
-    setup: verifyAuthenticode(setup, options.allowUnsigned),
-    msi: verifyAuthenticode(msi, options.allowUnsigned),
-    binary: verifyAuthenticode(binary, options.allowUnsigned),
+    setup: verifyAuthenticode(setup, options.allowUnsigned || externalStage),
+    msi: verifyAuthenticode(msi, options.allowUnsigned || externalStage),
+    binary: verifyAuthenticode(binary, options.stage === "bundle" ? !options.requireInputSignature : options.allowUnsigned),
   };
   runtimeSmoke(binary, options.arch, options.skipRuntimeSmoke);
 
@@ -753,7 +819,7 @@ function buildWindows(options) {
   if (updater && publicPaths.updater) copyImmutable(updater, publicPaths.updater);
   const updaterSig = updater ? `${updater}.sig` : null;
   if (updaterSig && (!existsSync(updaterSig) || !readFileSync(updaterSig, "utf8").trim())) {
-    if (!options.allowUnsigned) fail("Tauri updater signature is absent");
+    if (!options.allowUnsigned && !externalStage) fail("Tauri updater signature is absent");
   } else if (updaterSig && publicPaths.updaterSignature) {
     copyImmutable(updaterSig, publicPaths.updaterSignature);
   }
@@ -775,8 +841,10 @@ function buildWindows(options) {
     rust_target: options.arch.rustTarget,
     server_origin: process.env.GC_SERVER || CANONICAL_SERVER_ORIGIN,
     dirty_source: state.dirty,
-    signed: !options.allowUnsigned,
+    signed: !externalStage && !options.allowUnsigned,
+    build_stage: options.stage,
     authenticode: signatures,
+    embedded_app: { name: basename(binary), bytes: statSync(binary).size, sha256: sha256(binary) },
     tdlib: { version: tdlib.version ?? parsePinnedEnv().TDLIB_EXPECTED_VERSION, bytes: tdlib.bytes, sha256: tdlib.sha256 },
     update_target: publicPaths.updater && publicPaths.updaterSignature
       ? {

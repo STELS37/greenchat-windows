@@ -255,6 +255,7 @@ export const en: Dict = {
   "call.endDeclined": "Call declined",
   "call.endDeclinedByMe": "You declined the call",
   "call.endBusy": "The person is busy",
+  "call.endAnsweredElsewhere": "Answered on another device",
   "call.endNoAnswer": "No answer",
   "call.endUnavailable": "The person is unavailable",
   "call.endNotAllowed": "This person does not accept calls from you",
