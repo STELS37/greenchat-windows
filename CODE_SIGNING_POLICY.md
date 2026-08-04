@@ -6,7 +6,7 @@ GreenChat for Windows is applying for the SignPath Foundation open-source code-s
 
 Once approved, releases will carry this notice:
 
-> Free code signing provided by SignPath.io, certificate by SignPath Foundation
+> Free code signing provided by SignPath.io, certificate by SignPath Foundation.
 
 No self-signed certificate is presented to end users as a trusted public signature. Unsigned validation artifacts are clearly named and are never published as signed releases.
 

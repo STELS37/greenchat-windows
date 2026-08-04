@@ -52,19 +52,40 @@ jobs:
       - name: Install locked JavaScript dependencies
         working-directory: clients
         run: npm ci --ignore-scripts
-      - name: Type-check public client source
+      - name: Enforce public-source and secret boundary
+        run: node scripts/check-public-boundary.mjs
+      - name: Type-check and test public client source
         working-directory: clients
-        run: npm run check
+        run: |
+          npm run check
+          npm test
       - name: Build staged public web payload
         working-directory: clients
         env:
           GC_WEB_OUT_DIR: ${{ runner.temp }}/greenchat-public-web
           GC_UPDATE_MANIFEST_OUT: ${{ runner.temp }}/greenchat-public-update-manifest.json
         run: npm run build:web
-      - name: Validate Windows release contracts
+      - name: Validate Windows and SignPath release contracts
         run: |
           node scripts/build-windows-desktop.mjs --self-check
           node --test scripts/build-windows-desktop.test.mjs
+          python3 - <<'PY'
+          import pathlib
+          import xml.etree.ElementTree as ET
+          paths = [
+              pathlib.Path('signpath/app-artifact-configuration.xml'),
+              pathlib.Path('signpath/installer-artifact-configuration.xml'),
+          ]
+          for path in paths:
+              root = ET.parse(path).getroot()
+              assert root.tag == '{http://signpath.io/artifact-configuration/v1}artifact-configuration'
+          app = paths[0].read_text()
+          installers = paths[1].read_text()
+          assert 'file-version="${version}"' in app
+          assert 'file-version="${version}"' in installers
+          assert 'hash-algorithm="sha256"' in app and 'hash-algorithm="sha256"' in installers
+          print('SIGNPATH-CONFIG: OK')
+          PY
       - name: Reject generated changes
         run: git diff --exit-code
 
@@ -98,6 +119,8 @@ jobs:
           if ((git rev-parse HEAD).Trim() -ne $env:GC_SOURCE_SHA) { throw 'checkout SHA mismatch' }
           if (git status --porcelain) { throw 'checkout is dirty before build' }
           if ($env:GC_SERVER -notmatch '^https://') { throw 'GC_SERVER must use HTTPS' }
+
+          node scripts/check-public-boundary.mjs
 
       - uses: actions/setup-node@v6
         with:

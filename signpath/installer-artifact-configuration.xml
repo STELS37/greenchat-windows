@@ -7,13 +7,20 @@
   <zip-file>
     <pe-file path="GreenChat-${version}-windows-${arch}-setup.exe"
              product-name="GreenChat"
-             product-version="${version}">
-      <authenticode-sign description="GreenChat" />
+             product-version="${version}"
+             file-version="${version}">
+      <authenticode-sign
+        hash-algorithm="sha256"
+        description="GreenChat setup"
+        description-url="https://github.com/STELS37/greenchat-windows" />
     </pe-file>
     <msi-file path="GreenChat-${version}-windows-${arch}.msi"
               subject="GreenChat"
               author="SignPath Foundation">
-      <authenticode-sign description="GreenChat" />
+      <authenticode-sign
+        hash-algorithm="sha256"
+        description="GreenChat MSI"
+        description-url="https://github.com/STELS37/greenchat-windows" />
     </msi-file>
   </zip-file>
 </artifact-configuration>

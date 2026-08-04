@@ -5,6 +5,10 @@
 name = "green-chat-desktop"
 version = "1.0.0-beta.6"
 description = "Green Chat desktop client"
+
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/STELS37/greenchat-windows"
+homepage = "https://greenchat.globalsystem.cc"
 edition = "2021"
 rust-version = "1.77"
 

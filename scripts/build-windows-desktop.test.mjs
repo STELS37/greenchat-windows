@@ -310,10 +310,10 @@ test("every PNG frame inside the Windows app icon is 8-bit, which is all the ICO
   assert.ok(pngFrames > 0, "icon.ico has no PNG frame at all; this test stopped measuring anything");
 });
 
-test("every declared Windows bundle resource is staged or tracked", () => {
-  // Regression guard for the 2026-08-03 Windows worker failure: tauri.windows.conf.json
-  // declared resources/tdlib/OPENSSL_LICENSE.txt, the file is Git-ignored, and the Windows
-  // build script never staged it, so cargo test aborted before any packaging happened.
+test("every declared Windows bundle resource is staged", () => {
+  // Regression guards for Windows workers where Tauri aborted because a Git-ignored TDLib
+  // resource was declared but not recreated by the build script (first OPENSSL_LICENSE.txt,
+  // then README.md). Every static file must be copied from the tracked third-party directory.
   const conf = JSON.parse(source("clients/desktop/src-tauri/tauri.windows.conf.json"));
   const declared = Object.entries(conf.bundle.resources)
     .filter(([, target]) => target !== null)
@@ -322,22 +322,23 @@ test("every declared Windows bundle resource is staged or tracked", () => {
   const provided = new Set([
     "resources/tdlib/tdjson.dll", // built by ensurePinnedTdlib
     "resources/tdlib/BUILD-MANIFEST.windows.txt", // written by ensurePinnedTdlib
-    "resources/tdlib/TDLIB_LICENSE_1_0.txt", // staged by stageTdlibLicenses
-    "resources/tdlib/OPENSSL_LICENSE.txt", // staged by stageTdlibLicenses
-    "resources/tdlib/README.md", // tracked in Git
+    "resources/tdlib/TDLIB_LICENSE_1_0.txt", // staged by stageTdlibSupportFiles
+    "resources/tdlib/OPENSSL_LICENSE.txt", // staged by stageTdlibSupportFiles
+    "resources/tdlib/README.md", // staged by stageTdlibSupportFiles
   ]);
   for (const path of declared) {
     assert.ok(provided.has(path), `declared resource is never staged on Windows: ${path}`);
   }
   const script = source("scripts/build-windows-desktop.mjs");
-  // the call must exist, not merely the declaration
-  assert.match(script, /\n\s+stageTdlibLicenses\(resourceDir\);/);
+  // The call and each source-to-target mapping must exist, not merely the declaration.
+  assert.match(script, /\n\s+stageTdlibSupportFiles\(resourceDir\);/);
   assert.match(script, /\["LICENSE_1_0\.txt", "TDLIB_LICENSE_1_0\.txt"\]/);
   assert.match(script, /\["OPENSSL_LICENSE\.txt", "OPENSSL_LICENSE\.txt"\]/);
-  for (const name of ["LICENSE_1_0.txt", "OPENSSL_LICENSE.txt"]) {
+  assert.match(script, /\["README\.md", "README\.md"\]/);
+  for (const name of ["LICENSE_1_0.txt", "OPENSSL_LICENSE.txt", "README.md"]) {
     assert.ok(
       existsSync(join(root, "clients/third_party/tdlib", name)),
-      `upstream license source is missing: ${name}`,
+      `tracked TDLib support source is missing: ${name}`,
     );
   }
 });

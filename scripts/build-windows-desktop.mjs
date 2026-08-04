@@ -555,21 +555,21 @@ function writeSigningOverlay(thumbprint, allowUnsigned, version) {
   return { path, temp };
 }
 
-// The Windows bundle configuration declares the TDLib license files as Tauri resources,
-// but they are generated artefacts excluded from Git (clients/desktop/.gitignore).
-// The Linux/macOS TDLib build scripts stage them explicitly; the Windows lane must do the
-// same, otherwise `cargo test`/`tauri build` aborts with
-// "resource path `resources\tdlib\OPENSSL_LICENSE.txt` doesn't exist".
-function stageTdlibLicenses(resourceDir) {
-  const licenseRoot = join(repoRoot, "clients/third_party/tdlib");
+// The Windows bundle configuration declares TDLib support files as Tauri resources,
+// but the generated resource directory is excluded from Git. Stage every declared static file
+// from the tracked third-party directory before `cargo test`/`tauri build`; otherwise Tauri aborts
+// when even one resource (for example README.md or OPENSSL_LICENSE.txt) is absent.
+function stageTdlibSupportFiles(resourceDir) {
+  const sourceRoot = join(repoRoot, "clients/third_party/tdlib");
   const pairs = [
     ["LICENSE_1_0.txt", "TDLIB_LICENSE_1_0.txt"],
     ["OPENSSL_LICENSE.txt", "OPENSSL_LICENSE.txt"],
+    ["README.md", "README.md"],
   ];
   mkdirSync(resourceDir, { recursive: true });
   for (const [source, target] of pairs) {
-    const from = join(licenseRoot, source);
-    if (!existsSync(from)) fail(`TDLib license file is absent: ${from}`);
+    const from = join(sourceRoot, source);
+    if (!existsSync(from)) fail(`TDLib support file is absent: ${from}`);
     copyFileSync(from, join(resourceDir, target));
   }
 }
@@ -578,7 +578,7 @@ function ensurePinnedTdlib(arch, skipTdlib) {
   const resourceDir = join(tauriRoot, "resources/tdlib");
   const destination = join(resourceDir, "tdjson.dll");
   const manifestPath = join(resourceDir, "BUILD-MANIFEST.windows.txt");
-  stageTdlibLicenses(resourceDir);
+  stageTdlibSupportFiles(resourceDir);
   if (skipTdlib) {
     if (!existsSync(destination)) fail("--skip-tdlib requested but resources/tdlib/tdjson.dll is absent");
     if (peMachine(readFileSync(destination)) !== arch.peMachine) fail("existing tdjson.dll has the wrong architecture");

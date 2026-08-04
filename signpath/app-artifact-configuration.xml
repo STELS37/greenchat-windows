@@ -7,8 +7,12 @@
   <zip-file>
     <pe-file path="GreenChat-${version}-windows-${arch}-app.exe"
              product-name="GreenChat"
-             product-version="${version}">
-      <authenticode-sign description="GreenChat" />
+             product-version="${version}"
+             file-version="${version}">
+      <authenticode-sign
+        hash-algorithm="sha256"
+        description="GreenChat"
+        description-url="https://github.com/STELS37/greenchat-windows" />
     </pe-file>
   </zip-file>
 </artifact-configuration>
