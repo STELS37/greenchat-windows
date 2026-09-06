@@ -1,5 +1,6 @@
 name: gaming-enhancements-branch
 
+# One-shot validation for the non-release feature branch. The job deletes this file after success.
 on:
   push:
     branches:
