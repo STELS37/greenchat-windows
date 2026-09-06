@@ -34,6 +34,12 @@ jobs:
       - name: Materialize reviewed integration
         run: node scripts/integrate-gaming-enhancements.mjs
 
+      # The payload/helper are transport-only files. They must not be present while the repository's
+      # public-boundary tests inspect the tree. Remove them immediately after materialization; the
+      # generated TypeScript/CSS and app.ts patch remain in the working tree and are what we validate.
+      - name: Remove one-shot staging helpers before validation
+        run: rm -rf scripts/gaming-enhancements-payload scripts/integrate-gaming-enhancements.mjs .github/workflows/gaming-enhancements-branch.yml
+
       - name: Install locked dependencies
         working-directory: clients
         run: npm ci --ignore-scripts
@@ -45,9 +51,6 @@ jobs:
       - name: Test public client
         working-directory: clients
         run: npm test
-
-      - name: Remove one-shot staging helpers
-        run: rm -rf scripts/gaming-enhancements-payload scripts/integrate-gaming-enhancements.mjs .github/workflows/gaming-enhancements-branch.yml
 
       - name: Commit integrated source back to feature branch
         shell: bash
