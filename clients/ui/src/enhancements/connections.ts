@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // UI port, NOT an invented HTTP backend. The shell supplies official provider auth and server reads.
-export const GAME_PROVIDERS = ["tiktok", "epic"] as const;
-export type GameProvider = typeof GAME_PROVIDERS[number];
+import {
+  CONNECTION_PROVIDERS,
+  GAMING_PROVIDERS,
+  SOCIAL_FEED_PROVIDERS,
+  type ConnectionProvider,
+} from "./provider_surfaces.ts";
+
+// Compatibility export for the gaming UI: it must only enumerate providers that belong in Gamer Mode.
+export const GAME_PROVIDERS = GAMING_PROVIDERS;
+export const SOCIAL_PROVIDERS = SOCIAL_FEED_PROVIDERS;
+export type GameProvider = ConnectionProvider;
 export interface LinkedAccount {
   readonly id: string;
   readonly displayName: string;
@@ -35,7 +44,7 @@ export interface ConnectionsState {
   readonly fresh: boolean;
   readonly issue: ConnectionIssue;
 }
-const emptyProviders = (): readonly ProviderState[] => Object.freeze(GAME_PROVIDERS.map(provider =>
+const emptyProviders = (): readonly ProviderState[] => Object.freeze(CONNECTION_PROVIDERS.map(provider =>
   Object.freeze({ provider, available: false, account: null })));
 const initialState = (): ConnectionsState => Object.freeze({
   online: true, providers: emptyProviders(), loading: false, busy: null, action: null, fresh: false, issue: null,
@@ -53,7 +62,7 @@ export function normalizeProviders(value: unknown): readonly ProviderState[] {
   const known = new Map<GameProvider, ProviderState>();
   for (const raw of value) {
     const row = record(raw);
-    if (!GAME_PROVIDERS.includes(row.provider as GameProvider)) continue;
+    if (!CONNECTION_PROVIDERS.includes(row.provider as GameProvider)) continue;
     const provider = row.provider as GameProvider;
     if (known.has(provider) || typeof row.available !== "boolean") throw new Error("Ambiguous provider response");
     // Undefined/omitted is NOT equivalent to a confirmed null. Reject truncated responses.
@@ -67,7 +76,7 @@ export function normalizeProviders(value: unknown): readonly ProviderState[] {
     }
     known.set(provider, Object.freeze({ provider, available: row.available, account }));
   }
-  return Object.freeze(GAME_PROVIDERS.map(provider => known.get(provider) ??
+  return Object.freeze(CONNECTION_PROVIDERS.map(provider => known.get(provider) ??
     Object.freeze({ provider, available: false, account: null })));
 }
 function explicitlyLists(raw: unknown, provider: GameProvider): boolean {
