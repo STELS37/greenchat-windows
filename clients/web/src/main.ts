@@ -17,6 +17,7 @@ import "./bot_center.css";
 import "./miniapps.css";
 // Contacts acquisition hub: private phonebook sync, invitations and compact empty state.
 import "./contacts.css";
+import "../../ui/src/screens/gamer_mode_screen.css";
 // V178: SFU-backed group audio/video calls and screen sharing.
 import "./conference.css";
 // V193: once a message wraps, the text gets the full composer width and secondary actions move to a

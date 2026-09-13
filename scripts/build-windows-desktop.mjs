@@ -564,7 +564,7 @@ function stageTdlibSupportFiles(resourceDir) {
   const pairs = [
     ["LICENSE_1_0.txt", "TDLIB_LICENSE_1_0.txt"],
     ["OPENSSL_LICENSE.txt", "OPENSSL_LICENSE.txt"],
-    ["README.md", "README.md"],
+    ["README.md", "README.windows.md"],
   ];
   mkdirSync(resourceDir, { recursive: true });
   for (const [source, target] of pairs) {
@@ -730,7 +730,7 @@ function buildWindows(options) {
   const tdlib = ensurePinnedTdlib(options.arch, options.skipTdlib);
   if (!options.skipWeb && !options.skipChecks) {
     const rustGate = options.arch.node === process.arch ? "test" : "check";
-    run("rustup.exe", ["run", "stable", "cargo", rustGate, "--quiet", "--target", options.arch.rustTarget], { cwd: tauriRoot });
+    run("rustup.exe", ["run", "stable", "cargo", rustGate, "--locked", "--quiet", "--target", options.arch.rustTarget], { cwd: tauriRoot });
   }
 
   const targetRoot = join(tauriRoot, "target", options.arch.rustTarget, "release");

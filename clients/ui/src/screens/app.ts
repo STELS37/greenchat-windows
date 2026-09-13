@@ -16,6 +16,7 @@ import { createAuthScreen } from "./auth_screen.ts";
 import type { RegistrationModePort } from "./auth_screen.ts";
 import { createChatListScreen } from "./chat_list_screen.ts";
 import { createSettingsScreen } from "./settings_screen.ts";
+import { createGamingScreen } from "./gaming_screen.ts";
 import type {
   DiagnosticsConsentPort,
   LanguagePort,
@@ -412,6 +413,15 @@ export function createApp(deps: AppDeps): App {
     const catalogue: Array<
       MoreHubItem & { route?: string; requires?: "payments" | "cards"; available?: boolean }
     > = [
+      {
+        id: "gamer",
+        label: i18n.locale.startsWith("ru") ? "Игровой режим" : "Gamer Mode",
+        hint: i18n.t("more.gamerHint"),
+        glyph: "spark",
+        tone: "brand",
+        route: "/gamer",
+        open: () => router.navigate("/gamer"),
+      },
       {
         id: "wallet",
         label: i18n.t("shell.wallet"),
@@ -902,6 +912,14 @@ export function createApp(deps: AppDeps): App {
       );
       return;
     }
+    if (r.name === "gamer") {
+      swap("gamer", () => wrapInShell(createGamingScreen({
+        api, i18n,
+        self: session.currentUser() ?? { name: "", username: "" },
+        onBack: () => router.navigate("/settings"),
+      }), "settings"));
+      return;
+    }
     if (r.name === "bots") {
       swap("bots", () =>
         wrapInShell(createBotsScreen({
@@ -973,6 +991,7 @@ export function createApp(deps: AppDeps): App {
       swap("settings", () =>
         wrapInShell(
           createSettingsScreen({
+            onOpenGamer: () => router.navigate("/gamer"),
             api,
             i18n,
             atShellRoot: true,

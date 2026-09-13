@@ -118,6 +118,7 @@ export interface MoreHubItem {
 }
 
 export interface SettingsScreenDeps {
+  onOpenGamer?: () => void;
   api: ApiLike;
   i18n: I18n;
   onBack: () => void;
@@ -550,6 +551,11 @@ export function createSettingsScreen(deps: SettingsScreenDeps): {
     if (!isCurrent(generation)) return;
     clear(panel);
 
+    if (deps.onOpenGamer) {
+      const gamer = el("button", { type: "button", class: "gc-btn" }, [i18n.locale.startsWith("ru") ? "Игровой режим" : "Gamer Mode"]);
+      gamer.addEventListener("click", deps.onOpenGamer);
+      panel.append(gamer);
+    }
     const nameInput = el("input", { type: "text", class: "gc-input", value: me.name, maxlength: 128 }) as HTMLInputElement;
     const bioInput = el("textarea", { class: "gc-input gc-textarea", maxlength: 280, rows: 3 }) as HTMLTextAreaElement;
     bioInput.value = me.bio;

@@ -26,7 +26,7 @@
       "resources/tdlib/BUILD-MANIFEST.windows.txt": "tdlib/BUILD-MANIFEST.txt",
       "resources/tdlib/TDLIB_LICENSE_1_0.txt": "tdlib/TDLIB_LICENSE_1_0.txt",
       "resources/tdlib/OPENSSL_LICENSE.txt": "tdlib/OPENSSL_LICENSE.txt",
-      "resources/tdlib/README.md": "tdlib/README.md"
+      "resources/tdlib/README.windows.md": "tdlib/README.md"
     },
     "windows": {
       "allowDowngrades": false,

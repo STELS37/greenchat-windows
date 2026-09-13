@@ -334,7 +334,7 @@ test("every declared Windows bundle resource is staged", () => {
     "resources/tdlib/BUILD-MANIFEST.windows.txt", // written by ensurePinnedTdlib
     "resources/tdlib/TDLIB_LICENSE_1_0.txt", // staged by stageTdlibSupportFiles
     "resources/tdlib/OPENSSL_LICENSE.txt", // staged by stageTdlibSupportFiles
-    "resources/tdlib/README.md", // staged by stageTdlibSupportFiles
+    "resources/tdlib/README.windows.md", // staged without overwriting tracked README.md
   ]);
   for (const path of declared) {
     assert.ok(provided.has(path), `declared resource is never staged on Windows: ${path}`);
@@ -344,7 +344,7 @@ test("every declared Windows bundle resource is staged", () => {
   assert.match(script, /\n\s+stageTdlibSupportFiles\(resourceDir\);/);
   assert.match(script, /\["LICENSE_1_0\.txt", "TDLIB_LICENSE_1_0\.txt"\]/);
   assert.match(script, /\["OPENSSL_LICENSE\.txt", "OPENSSL_LICENSE\.txt"\]/);
-  assert.match(script, /\["README\.md", "README\.md"\]/);
+  assert.match(script, /\["README\.md", "README\.windows\.md"\]/);
   for (const name of ["LICENSE_1_0.txt", "OPENSSL_LICENSE.txt", "README.md"]) {
     assert.ok(
       existsSync(join(root, "clients/third_party/tdlib", name)),

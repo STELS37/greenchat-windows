@@ -1,6 +1,6 @@
 {
   "name": "green-chat-clients",
-  "version": "1.0.0-beta.6",
+  "version": "1.0.0-beta.7",
   "private": true,
   "description": "Green Chat client codebase (vanilla TS, no frameworks): core SDK, UI, web/PWA, desktop and mobile shells.",
 

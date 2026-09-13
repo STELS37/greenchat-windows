@@ -4,6 +4,11 @@ clients/desktop/src-tauri/target/
 clients/desktop/src-tauri/resources/tdlib/*.dll
 clients/desktop/src-tauri/resources/tdlib/*.so
 clients/desktop/src-tauri/resources/tdlib/*.dylib
+clients/desktop/src-tauri/resources/tdlib/BUILD-MANIFEST.windows.txt
+clients/desktop/src-tauri/resources/tdlib/TDLIB_LICENSE_1_0.txt
+clients/desktop/src-tauri/resources/tdlib/OPENSSL_LICENSE.txt
+clients/desktop/src-tauri/resources/tdlib/README.windows.md
+clients/desktop/src-tauri/gen/schemas/
 var/
 dist/
 artifacts/

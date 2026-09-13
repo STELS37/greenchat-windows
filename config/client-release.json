@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "release_id": "green-chat-1.0.0-beta.6-android.1000027-rev.4",
+  "release_id": "green-chat-1.0.0-beta.7-android.1000027-rev.5",
   "channel": "beta",
-  "current_version": "1.0.0-beta.6",
+  "current_version": "1.0.0-beta.7",
   "published_at": "2026-08-04T17:42:43Z",
-  "notes": "BETA RELEASE rev.4: обновлены Web/PWA и клиентский интерфейс GreenChat, включая устранение дублирующей кнопки показа пароля. Android APK versionCode 1000027 и его проверенные артефакты остаются неизменными; следующий нативный Android-релиз использует зарезервированный versionCode 1000028.",
+  "notes": "Windows beta.7 candidate: Gamer Mode connected to navigation, Steam/FACEIT and server privacy settings. Platform download entries retain the last published artifacts until release verification.",
   "platforms": {
     "web": {
       "status": "available",
@@ -71,5 +71,5 @@
       "version": "1.0.0-beta.6"
     }
   },
-  "catalog_revision": 4
+  "catalog_revision": 5
 }
