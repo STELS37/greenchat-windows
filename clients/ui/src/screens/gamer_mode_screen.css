@@ -43,6 +43,14 @@
 .gc-gm[data-enabled="false"] .gc-gm-ambient {
   opacity: .16;
 }
+.gc-gm[data-enabled="false"] .gc-gm-particle { animation-play-state: paused; }
+.gc-gaming-page { height: 100%; min-height: 0; overflow-y: auto; background: var(--gc-bg); }
+.gc-gaming-status, .gc-gaming-controls { margin: 0 auto; max-width: 1180px; padding: 12px 20px; }
+.gc-gaming-status:empty { display: none; }
+.gc-gaming-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding-bottom: 24px; }
+.gc-gaming-controls label { display: flex; align-items: center; gap: 8px; }
+.gc-gm-btn:focus-visible { outline: 2px solid var(--gm-accent); outline-offset: 3px; }
+.gc-gm-switch-input:disabled + .gc-gm-switch { opacity: .5; }
 
 .gc-gm-ambient {
   position: absolute;
@@ -54,7 +62,6 @@
 }
 
 .gc-gm-particle {
-  --x: calc((var(--i) * 47) % 101);
   position: absolute;
   left: calc(var(--x) * 1%);
   top: -12px;
@@ -221,9 +228,10 @@
 .gc-gm-section-kicker { grid-column: 1 / -1; color: var(--gm-muted); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; }
 .gc-gm-now > .gc-gm-media { width: 142px; height: 92px; object-fit: cover; border-radius: 16px; box-shadow: 0 12px 24px rgba(0,0,0,.18); }
 .gc-gm-now-copy { align-self: center; }
+.gc-gm-now-copy:nth-child(2) { grid-column: 1 / -1; }
 .gc-gm-now-copy h3 { margin: 0; font-size: 22px; }
 .gc-gm-now-copy p { margin: 7px 0 10px; color: var(--gm-muted); }
-.gc-gm-empty { display: grid; place-items: center; color: var(--gm-muted); font-size: 40px; }
+.gc-gm-empty { grid-column: 1 / -1; display: grid; place-items: center; color: var(--gm-muted); font-size: 16px; }
 
 .gc-gm-pill { display: inline-flex; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; color: var(--gm-accent); background: color-mix(in srgb, var(--gm-accent) 10%, transparent); border: 1px solid color-mix(in srgb, var(--gm-accent) 18%, transparent); font-size: 12px; font-weight: 750; }
 
@@ -247,7 +255,7 @@
 .gc-gm-btn:disabled { opacity: .42; cursor: default; }
 
 .gc-gm-faceit-rank { display: flex; align-items: center; gap: 12px; margin: 20px 0 18px; }
-.gc-gm-faceit-badge { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 22px 22px 22px 8px; font-size: 28px; font-weight: 950; color: white; background: linear-gradient(145deg, #ff5227, #ca1724); box-shadow: 0 10px 28px rgba(255,60,38,.2); }
+.gc-gm-faceit-badge { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 50%; font-size: 28px; font-weight: 950; color: var(--rank-color, #ff4426); background: radial-gradient(closest-side, #202024 72%, transparent 75%), conic-gradient(from 225deg, var(--rank-color, #ff4426) 0deg 270deg, #202024 270deg 360deg); border: 6px solid #202024; box-shadow: 0 8px 22px rgba(0,0,0,.18); }
 .gc-gm-faceit-copy { color: var(--gm-muted); font-size: 13px; }
 .gc-gm-level-bar { display: grid; grid-template-columns: repeat(10,1fr); gap: 4px; margin: auto 0 0; }
 .gc-gm-level-dot { aspect-ratio: 1; min-width: 0; display: grid; place-items: center; border-radius: 8px; color: var(--gm-muted); background: rgba(255,255,255,.04); font-size: 9px; transition: transform .22s ease, background .22s ease, color .22s ease; }

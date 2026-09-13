@@ -26,6 +26,31 @@ const TRAY_ID: &str = "main";
 
 const DEFAULT_SERVER_ORIGIN: &str = "https://greenchat.globalsystem.cc";
 
+// Provider authentication must leave the WebView and use the person's system browser.
+// Strict destinations prevent this IPC command from becoming a general process/URL launcher.
+#[tauri::command]
+fn open_gaming_external(url: String) -> Result<(), String> {
+    let parsed = Url::parse(&url).map_err(|_| "Invalid provider URL")?;
+    if parsed.scheme() != "https" || !parsed.username().is_empty() || parsed.password().is_some()
+        || parsed.port().is_some()
+        || !matches!(parsed.host_str(), Some("steamcommunity.com" | "faceit.com" | "www.faceit.com" | "store.epicgames.com")) {
+        return Err("Invalid provider URL".into());
+    }
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        use std::os::windows::process::CommandExt;
+        let mut cmd = std::process::Command::new("rundll32.exe");
+        cmd.arg("url.dll,FileProtocolHandler").creation_flags(0x08000000);
+        cmd
+    };
+    #[cfg(target_os = "macos")]
+    let mut command = std::process::Command::new("/usr/bin/open");
+    #[cfg(target_os = "linux")]
+    let mut command = std::process::Command::new("xdg-open");
+    command.arg(parsed.as_str()).spawn().map_err(|_| "Could not open browser".to_string())?;
+    Ok(())
+}
+
 #[cfg(target_os = "linux")]
 fn desktop_os() -> &'static str {
     "linux"
@@ -473,6 +498,7 @@ pub fn run() {
             autostart_set,
             app_version,
             desktop_identity,
+            open_gaming_external,
             update_target,
             must_force_update,
             check_update,

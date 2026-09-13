@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { readFileSync, readdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, relative, isAbsolute } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -77,7 +77,9 @@ function assertExactClassification(paths, expectedNames, label) {
 }
 
 function run(args, label) {
-  const result = spawnSync(process.execPath, args, { cwd: clientsRoot, stdio: "inherit", env: process.env });
+  // Windows limits command lines to 32K characters; workspace prefixes need not be repeated per test.
+  const localArgs = args.map(arg => isAbsolute(arg) ? relative(clientsRoot, arg) : arg);
+  const result = spawnSync(process.execPath, localArgs, { cwd: clientsRoot, stdio: "inherit", env: process.env });
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${label} failed with exit code ${result.status}`);
 }

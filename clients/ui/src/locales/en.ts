@@ -66,6 +66,7 @@ export const en: Dict = {
   // 2 lines in the 144 px tile box; the English support hint (39 chars) already fits, the Russian
   // one did not, because Cyrillic is wider at this size.
   "more.miniappsHint": "Open without installs or extra accounts",
+  "more.gamerHint": "Steam, FACEIT and Epic Games",
 
   "shell.contacts": "Contacts",
   "more.contactsHint": "Your address book and people search",

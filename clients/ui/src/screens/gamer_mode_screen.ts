@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import "./gamer_mode_screen.css";
 
 export interface GamerModeProfile {
   name: string;
@@ -20,6 +19,7 @@ export interface GamerModeProfile {
     elo?: number | null;
     topPercent?: number | null;
   };
+  epic?: { linked: boolean };
   nowPlaying?: {
     title: string;
     subtitle?: string;
@@ -37,6 +37,11 @@ export interface GamerModeScreenDeps {
   onOpenSteam?: () => void;
   onOpenFaceit?: () => void;
   onOpenEpic?: () => void;
+  onBack?: () => void;
+  onUnlinkSteam?: () => void;
+  onUnlinkFaceit?: () => void;
+  busy?: boolean;
+  available?: boolean;
 }
 
 export interface GamerModeScreen {
@@ -55,6 +60,13 @@ const ru = {
   connected: "Подключено",
   notConnected: "Не подключено",
   open: "Открыть профиль",
+  link: "Подключить",
+  unlink: "Отключить",
+  back: "Назад",
+  epicHint: "Привязка Epic Games пока недоступна на сервере. Можно открыть магазин.",
+  store: "Открыть Epic Games",
+  empty: "Нет данных",
+  noAchievements: "Достижения пока недоступны",
   level: "Уровень",
   games: "Игр",
   hours: "Часов",
@@ -77,6 +89,13 @@ const en: Record<keyof typeof ru, string> = {
   connected: "Connected",
   notConnected: "Not connected",
   open: "Open profile",
+  link: "Connect",
+  unlink: "Disconnect",
+  back: "Back",
+  epicHint: "Epic Games linking is not available on this server yet. You can open the store.",
+  store: "Open Epic Games",
+  empty: "No data",
+  noAchievements: "Achievements are not available yet",
   level: "Level",
   games: "Games",
   hours: "Hours",
@@ -91,7 +110,7 @@ const en: Record<keyof typeof ru, string> = {
 
 const node = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] => {
   const el = document.createElement(tag);
-  if (className) el.className = className;
+  if (className) el.setAttribute("class", className);
   if (text !== undefined) el.textContent = text;
   return el;
 };
@@ -104,16 +123,33 @@ const button = (label: string, onClick?: () => void): HTMLButtonElement => {
   return b;
 };
 
-const safeImg = (url?: string | null): HTMLImageElement | null => {
+const safeImg = (url: string | null | undefined, cleanup: Array<() => void>): HTMLImageElement | null => {
   if (!url) return null;
   try {
     const parsed = new URL(url, globalThis.location?.href ?? "https://greenchat.invalid/");
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
     const img = node("img", "gc-gm-media");
-    img.src = parsed.href;
     img.alt = "";
     img.loading = "lazy";
     img.referrerPolicy = "no-referrer";
+    // Desktop CSP accepts blob images, while signed media lives on the configured backend.
+    // Fetch only GreenChat's media route; provider credentials never travel to image hosts.
+    if (parsed.origin !== globalThis.location?.origin && parsed.pathname.startsWith("/v1/gaming/media/")) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10_000);
+      let objectUrl: string | null = null;
+      cleanup.push(() => { controller.abort(); clearTimeout(timeout); if (objectUrl) URL.revokeObjectURL(objectUrl); });
+      void fetch(parsed.href, { credentials: "omit", redirect: "error", referrerPolicy: "no-referrer", signal: controller.signal })
+        .then(async response => {
+          if (!response.ok || !/^image\/(png|jpeg|webp)$/.test(response.headers.get("content-type")?.split(";")[0] ?? "")) return;
+          if (Number(response.headers.get("content-length")) > 2 * 1024 * 1024) return;
+          const blob = await response.blob();
+          if (controller.signal.aborted || blob.size > 2 * 1024 * 1024) return;
+          objectUrl = URL.createObjectURL(blob);
+          img.src = objectUrl;
+        }).catch(() => { /* The surrounding profile/game text remains available without artwork. */ })
+        .finally(() => clearTimeout(timeout));
+    } else img.src = parsed.href;
     return img;
   } catch {
     return null;
@@ -121,6 +157,7 @@ const safeImg = (url?: string | null): HTMLImageElement | null => {
 };
 
 export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScreen {
+  const cleanup: Array<() => void> = [];
   const copy = (deps.locale ?? "ru").toLowerCase().startsWith("ru") ? ru : en;
   const root = node("section", "gc-gm");
   root.setAttribute("aria-label", copy.title);
@@ -131,11 +168,13 @@ export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScree
   for (let i = 0; i < 22; i += 1) {
     const p = node("i", "gc-gm-particle");
     p.style.setProperty("--i", String(i));
+    p.style.setProperty("--x", String((i * 47) % 101));
     ambient.append(p);
   }
   root.append(ambient);
 
   const shell = node("div", "gc-gm-shell");
+  if (deps.onBack) shell.append(button(copy.back, deps.onBack));
   const header = node("header", "gc-gm-header");
   const intro = node("div", "gc-gm-intro");
   const mark = node("div", "gc-gm-mark", "G");
@@ -145,16 +184,19 @@ export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScree
 
   const toggleLabel = node("label", "gc-gm-switch-wrap");
   const toggleCopy = node("span", "gc-gm-switch-copy");
-  toggleCopy.append(node("b", "", copy.title), node("small", "", root.dataset.enabled === "true" ? "ON" : "OFF"));
+  const toggleState = node("small", "", root.dataset.enabled === "true" ? "ON" : "OFF");
+  toggleCopy.append(node("b", "", copy.title), toggleState);
   const toggle = node("input") as HTMLInputElement;
   toggle.type = "checkbox";
   toggle.checked = root.dataset.enabled === "true";
-  toggle.className = "gc-gm-switch-input";
+  toggle.setAttribute("class", "gc-gm-switch-input");
+  toggle.setAttribute("aria-label", copy.title);
+  toggle.disabled = Boolean(deps.busy) || deps.available === false;
   const visual = node("span", "gc-gm-switch");
   toggleLabel.append(toggleCopy, toggle, visual);
   const onToggle = (): void => {
     root.dataset.enabled = toggle.checked ? "true" : "false";
-    toggleCopy.querySelector("small")!.textContent = toggle.checked ? "ON" : "OFF";
+    toggleState.textContent = toggle.checked ? "ON" : "OFF";
     deps.onEnabledChange?.(toggle.checked);
   };
   toggle.addEventListener("change", onToggle);
@@ -163,7 +205,7 @@ export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScree
   const hero = node("div", "gc-gm-hero");
   const profileCard = node("article", "gc-gm-card gc-gm-profile");
   const avatar = node("div", "gc-gm-avatar");
-  const avatarImg = safeImg(deps.profile.avatarUrl);
+  const avatarImg = safeImg(deps.profile.avatarUrl, cleanup);
   if (avatarImg) avatar.append(avatarImg);
   else avatar.append(node("span", "gc-gm-avatar-fallback", (deps.profile.name.trim()[0] || "G").toUpperCase()));
   avatar.append(node("span", "gc-gm-online-dot"));
@@ -174,7 +216,7 @@ export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScree
   const now = node("article", "gc-gm-card gc-gm-now");
   now.append(node("div", "gc-gm-section-kicker", copy.now));
   if (deps.profile.nowPlaying) {
-    const media = safeImg(deps.profile.nowPlaying.imageUrl);
+    const media = safeImg(deps.profile.nowPlaying.imageUrl, cleanup);
     if (media) now.append(media);
     const body = node("div", "gc-gm-now-copy");
     body.append(node("h3", "", deps.profile.nowPlaying.title));
@@ -182,7 +224,7 @@ export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScree
     if (deps.profile.nowPlaying.session) body.append(node("span", "gc-gm-pill", deps.profile.nowPlaying.session));
     now.append(body);
   } else {
-    now.append(node("div", "gc-gm-empty", "—"));
+    now.append(node("div", "gc-gm-empty", copy.empty));
   }
   hero.append(profileCard, now);
 
@@ -192,7 +234,7 @@ export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScree
     const top = node("div", "gc-gm-provider-top");
     const logo = node("div", "gc-gm-provider-logo", kind === "steam" ? "S" : kind === "faceit" ? "F" : "E");
     const name = kind === "steam" ? copy.steam : kind === "faceit" ? copy.faceit : copy.epic;
-    const linked = kind === "steam" ? Boolean(deps.profile.steam?.linked) : kind === "faceit" ? Boolean(deps.profile.faceit?.linked) : true;
+    const linked = Boolean(deps.profile[kind]?.linked);
     const status = node("span", `gc-gm-status ${linked ? "is-linked" : ""}`, linked ? copy.connected : copy.notConnected);
     top.append(logo, node("h3", "", name), status);
     card.append(top);
@@ -205,21 +247,24 @@ export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScree
         item.append(node("strong", "", value == null ? "—" : String(value)), node("span", "", String(label)));
         stats.append(item);
       });
-      card.append(stats, button(copy.open, deps.onOpenSteam));
+      card.append(stats, button(linked ? copy.open : copy.link, deps.onOpenSteam));
+      if (linked && deps.onUnlinkSteam) card.append(button(copy.unlink, deps.onUnlinkSteam));
     } else if (kind === "faceit") {
       const f = deps.profile.faceit;
-      const level = Math.max(1, Math.min(10, Number(f?.level ?? 1)));
+      const level = Number.isFinite(f?.level) ? Math.max(0, Math.min(10, Number(f!.level))) : 0;
       const rank = node("div", "gc-gm-faceit-rank");
-      rank.append(node("div", "gc-gm-faceit-badge", String(level)), node("div", "gc-gm-faceit-copy", `${copy.elo}: ${f?.elo ?? "—"}`));
+      rank.style.setProperty("--rank-color", level >= 10 ? "#ff3425" : level >= 8 ? "#ff8a22" : level >= 4 ? "#f3d130" : level ? "#31c878" : "#93ab9c");
+      rank.append(node("div", "gc-gm-faceit-badge", level ? String(level) : "—"), node("div", "gc-gm-faceit-copy", `${copy.elo}: ${f?.elo ?? "—"}`));
       if (f?.topPercent != null) rank.append(node("span", "gc-gm-pill", `${copy.top} ${f.topPercent}%`));
       const bar = node("div", "gc-gm-level-bar");
       for (let i = 1; i <= 10; i += 1) {
         const dot = node("span", `gc-gm-level-dot${i <= level ? " is-on" : ""}`, String(i));
         bar.append(dot);
       }
-      card.append(rank, bar, button(copy.open, deps.onOpenFaceit));
+      card.append(rank, bar, button(linked ? copy.open : copy.link, deps.onOpenFaceit));
+      if (linked && deps.onUnlinkFaceit) card.append(button(copy.unlink, deps.onUnlinkFaceit));
     } else {
-      card.append(node("p", "gc-gm-provider-hint", "Игровая библиотека и друзья Epic Games."), button(copy.open, deps.onOpenEpic));
+      card.append(node("p", "gc-gm-provider-hint", copy.epicHint), button(copy.store, deps.onOpenEpic));
     }
     return card;
   };
@@ -229,10 +274,7 @@ export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScree
   achievements.append(node("div", "gc-gm-section-kicker", copy.achievements));
   const achievementsGrid = node("div", "gc-gm-achievements-grid");
   const source = deps.profile.achievements?.slice(0, 4) ?? [];
-  const items = source.length ? source : [
-    { title: copy.calm, subtitle: copy.calmHint, icon: "✦" },
-    { title: copy.particles, subtitle: copy.particlesHint, icon: "❄" },
-  ];
+  const items = source.length ? source : [{ title: copy.noAchievements, icon: "☆" }];
   for (const a of items) {
     const item = node("div", "gc-gm-achievement");
     item.append(node("span", "gc-gm-achievement-icon", a.icon ?? "★"));
@@ -254,6 +296,7 @@ export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScree
       if (destroyed) return;
       destroyed = true;
       toggle.removeEventListener("change", onToggle);
+      for (const dispose of cleanup) dispose();
       root.remove();
     },
   };

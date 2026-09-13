@@ -13,6 +13,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { avatarTone } from "../src/screens/message_menu.ts";
 import { peerToneSeed } from "../src/screens/call_overlay.ts";
@@ -30,7 +31,7 @@ const walk = (dir: string): string[] => {
   }
   return out;
 };
-const srcRoot = new URL("../src", import.meta.url).pathname;
+const srcRoot = fileURLToPath(new URL("../src", import.meta.url));
 
 // Prose may name the banned pattern — that is how the reason survives. Only live code is judged.
 const code = (text: string): string => text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");

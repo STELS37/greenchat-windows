@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.tauri.app/config/2",
   "productName": "Green Chat",
-  "version": "1.0.0-beta.6",
+  "version": "1.0.0-beta.7",
   "identifier": "app.greenchat.desktop",
   "build": {
     "frontendDist": "../../web/dist"

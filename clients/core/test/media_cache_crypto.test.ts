@@ -326,7 +326,7 @@ test("T-201 пин: в клиентском src нет секретных чат
     }
   }
   assert.deepEqual(
-    mediaWriters.map((f) => f.split("/").slice(-2).join("/")),
+    mediaWriters.map((f) => f.replaceAll("\\", "/").split("/").slice(-2).join("/")),
     ["src/media_cache.ts"],
     "в коллекцию media пишет только MediaCache",
   );
