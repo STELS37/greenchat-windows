@@ -7,6 +7,11 @@
   if (!T || !T.core) return; // running in a plain browser — no-op, the PWA behaves normally
   var invoke = T.core.invoke;
   window.__gcOpenGamingExternal = function (url) { return invoke("open_gaming_external", { url: url }); };
+  window.__gcOpenTikTokPost = function (url) { return invoke("open_tiktok_post", { url: url }); };
+  window.__gcEpicLibrary = {
+    list: function () { return invoke("epic_installed_games"); },
+    launch: function (id) { return invoke("epic_launch_game", { id: id }); }
+  };
 
   // Native identity is injected by Rust before this script is parsed. Keep `platform:"desktop"` for
   // the existing telemetry/server contract, while exposing the real OS and architecture so an installed

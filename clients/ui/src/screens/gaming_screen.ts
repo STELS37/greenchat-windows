@@ -2,6 +2,7 @@
 import { createGamerModeScreen, type GamerModeScreen } from "./gamer_mode_screen.ts";
 import { gamingExternalUrl, gamingProfile, validateGamingState, type GamingSettings, type GamingState } from "./gaming_model.ts";
 import { el } from "../dom.ts";
+import { createEpicLibrary, type EpicLibraryPort } from "./epic_library.ts";
 import type { ApiLike } from "./api.ts";
 import type { I18n } from "../i18n.ts";
 
@@ -17,6 +18,9 @@ export function createGamingScreen(deps: {
   const status = el("p", { class: "gc-gaming-status", role: "status", "aria-live": "polite" });
   const controls = el("div", { class: "gc-gaming-controls" });
   root.append(host, status, controls);
+  const epicLibrary = createEpicLibrary(i18n.locale,
+    (window as Window & { __gcEpicLibrary?: EpicLibraryPort }).__gcEpicLibrary);
+  root.append(epicLibrary.root);
   let state: GamingState | null = null;
   let view: GamerModeScreen | null = null;
   let destroyed = false;
@@ -134,5 +138,6 @@ export function createGamingScreen(deps: {
     window.removeEventListener("online", wake);
     view?.destroy();
     root.remove();
+    epicLibrary.destroy();
   } };
 }

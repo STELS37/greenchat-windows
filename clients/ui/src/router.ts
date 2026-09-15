@@ -23,6 +23,7 @@ export const WEB_ROUTES: RouteDef[] = [
   { name: "home", pattern: "/" },
   { name: "settings", pattern: "/settings" },
   { name: "gamer", pattern: "/gamer" },
+  { name: "social", pattern: "/social" },
   { name: "bots", pattern: "/bots" },
   { name: "miniapps", pattern: "/miniapps" },
   { name: "miniappChatStart", pattern: "/miniapp/:id/chat/:chat/:start" },

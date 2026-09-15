@@ -1,0 +1,10 @@
+.gc-social-page { height: 100%; overflow-y: auto; padding: 24px; box-sizing: border-box; color: var(--gc-text, inherit); }
+.gc-social-page > p { max-width: 640px; line-height: 1.5; }
+.gc-social-form { display: flex; flex-wrap: wrap; gap: 12px; max-width: 720px; }
+.gc-social-form input { flex: 1 1 280px; min-width: 0; padding: 12px; }
+.gc-social-posts { display: grid; gap: 12px; justify-items: start; }
+.gc-epic-library { padding: 24px; max-width: 1000px; margin: 0 auto; }
+.gc-epic-games { display: grid; gap: 12px; margin-top: 16px; }
+.gc-epic-game { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border: 1px solid #70887855; border-radius: 16px; }
+.gc-social-player { width: min(100%, 420px); height: min(74vh, 740px); min-height: 360px; border: 0; border-radius: 18px; background: #111; }
+@media (max-width: 520px) { .gc-social-page { padding: 16px; } }

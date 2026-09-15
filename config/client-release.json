@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "release_id": "green-chat-1.0.0-beta.7-android.1000027-rev.5",
+  "release_id": "green-chat-1.0.0-beta.8-android.1000027-rev.5",
   "channel": "beta",
-  "current_version": "1.0.0-beta.7",
+  "current_version": "1.0.0-beta.8",
   "published_at": "2026-08-04T17:42:43Z",
   "notes": "Windows beta.7 candidate: Gamer Mode connected to navigation, Steam/FACEIT and server privacy settings. Platform download entries retain the last published artifacts until release verification.",
   "platforms": {

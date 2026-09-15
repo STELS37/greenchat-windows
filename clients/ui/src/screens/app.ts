@@ -17,6 +17,7 @@ import type { RegistrationModePort } from "./auth_screen.ts";
 import { createChatListScreen } from "./chat_list_screen.ts";
 import { createSettingsScreen } from "./settings_screen.ts";
 import { createGamingScreen } from "./gaming_screen.ts";
+import { createSocialScreen } from "./social_screen.ts";
 import type {
   DiagnosticsConsentPort,
   LanguagePort,
@@ -421,6 +422,15 @@ export function createApp(deps: AppDeps): App {
         tone: "brand",
         route: "/gamer",
         open: () => router.navigate("/gamer"),
+      },
+      {
+        id: "social",
+        label: i18n.locale.startsWith("ru") ? "Социальная лента" : "Social feed",
+        hint: i18n.t("more.socialHint"),
+        glyph: "spark",
+        tone: "brand",
+        route: "/social",
+        open: () => router.navigate("/social"),
       },
       {
         id: "wallet",
@@ -918,6 +928,11 @@ export function createApp(deps: AppDeps): App {
         self: session.currentUser() ?? { name: "", username: "" },
         onBack: () => router.navigate("/settings"),
       }), "settings"));
+      return;
+    }
+    if (r.name === "social") {
+      swap("social", () => wrapInShell(createSocialScreen({ locale: i18n.locale,
+        onBack: () => router.navigate("/settings") }), "settings"));
       return;
     }
     if (r.name === "bots") {
