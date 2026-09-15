@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { el } from "../dom.ts";
 import { tiktokPost } from "./tiktok_model.ts";
+import type { ApiLike } from "./api.ts";
+import { createProviderConnection } from "./provider_connection.ts";
 
-export function createSocialScreen(deps: { locale: string; onBack(): void }) {
+export function createSocialScreen(deps: { locale: string; api?: ApiLike; onBack(): void }) {
   const ru = deps.locale.startsWith("ru");
   const copy = (a: string, b: string) => ru ? a : b;
   const root = el("section", { class: "gc-social-page" });
@@ -20,6 +22,8 @@ export function createSocialScreen(deps: { locale: string; onBack(): void }) {
       "Вставь полную ссылку на публичное видео или фото TikTok. Плеер загрузится с TikTok после нажатия «Смотреть».",
       "Paste the full link to a public TikTok video or photo. The TikTok player loads when you select Watch.")]),
     form, status, feed);
+  const connection = deps.api ? createProviderConnection({ provider: "tiktok", locale: deps.locale, api: deps.api }) : null;
+  if (connection) root.insertBefore(connection.root, form);
   let frame: HTMLIFrameElement | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
   let destroyed = false;
@@ -67,5 +71,5 @@ export function createSocialScreen(deps: { locale: string; onBack(): void }) {
   document.addEventListener("visibilitychange", visibility);
   return { root, destroy() { destroyed = true; stopTimer(); window.removeEventListener("message", onMessage);
     document.removeEventListener("visibilitychange", visibility);
-    form.removeEventListener("submit", onSubmit); frame?.remove(); frame = null; root.remove(); } };
+    form.removeEventListener("submit", onSubmit); connection?.destroy(); frame?.remove(); frame = null; root.remove(); } };
 }

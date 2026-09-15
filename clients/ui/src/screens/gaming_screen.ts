@@ -3,6 +3,7 @@ import { createGamerModeScreen, type GamerModeScreen } from "./gamer_mode_screen
 import { gamingExternalUrl, gamingProfile, validateGamingState, type GamingSettings, type GamingState } from "./gaming_model.ts";
 import { el } from "../dom.ts";
 import { createEpicLibrary, type EpicLibraryPort } from "./epic_library.ts";
+import { createProviderConnection, type ProviderConnectionState } from "./provider_connection.ts";
 import type { ApiLike } from "./api.ts";
 import type { I18n } from "../i18n.ts";
 
@@ -27,6 +28,11 @@ export function createGamingScreen(deps: {
   let busy = false;
   let generation = 0;
   let fresh = false;
+  let epicState: ProviderConnectionState | null = null;
+  const epicConnection = createProviderConnection({ provider: "epic", locale: i18n.locale, api,
+    ...(deps.openExternal ? { openExternal: deps.openExternal } : {}),
+    onChange(next) { epicState = next; if (!destroyed) render(); },
+  });
 
   const open = async (url: string, provider: "steam" | "faceit" | "epic", auth = false): Promise<void> => {
     const safe = gamingExternalUrl(url, provider, auth);
@@ -87,7 +93,8 @@ export function createGamingScreen(deps: {
     const steam = state?.profile.steam;
     const faceit = state?.profile.faceit;
     view = createGamerModeScreen({
-      profile: state ? gamingProfile(state, deps.self, api) : deps.self,
+      profile: { ...(state ? gamingProfile(state, deps.self, api) : deps.self), epic: { linked: !!epicState?.account } },
+      epicConnection: epicConnection.root,
       locale: i18n.locale,
       initialEnabled: state?.settings.enabled ?? false,
       available: fresh,
@@ -139,5 +146,6 @@ export function createGamingScreen(deps: {
     view?.destroy();
     root.remove();
     epicLibrary.destroy();
+    epicConnection.destroy();
   } };
 }

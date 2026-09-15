@@ -37,6 +37,7 @@ export interface GamerModeScreenDeps {
   onOpenSteam?: () => void;
   onOpenFaceit?: () => void;
   onOpenEpic?: () => void;
+  epicConnection?: HTMLElement;
   onBack?: () => void;
   onUnlinkSteam?: () => void;
   onUnlinkFaceit?: () => void;
@@ -264,7 +265,8 @@ export function createGamerModeScreen(deps: GamerModeScreenDeps): GamerModeScree
       card.append(rank, bar, button(linked ? copy.open : copy.link, deps.onOpenFaceit));
       if (linked && deps.onUnlinkFaceit) card.append(button(copy.unlink, deps.onUnlinkFaceit));
     } else {
-      card.append(node("p", "gc-gm-provider-hint", copy.epicHint), button(copy.store, deps.onOpenEpic));
+      if (deps.epicConnection) card.append(deps.epicConnection);
+      else card.append(node("p", "gc-gm-provider-hint", copy.epicHint), button(copy.store, deps.onOpenEpic));
     }
     return card;
   };
