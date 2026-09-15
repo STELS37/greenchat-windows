@@ -7,6 +7,7 @@
   if (!T || !T.core) return; // running in a plain browser — no-op, the PWA behaves normally
   var invoke = T.core.invoke;
   window.__gcOpenGamingExternal = function (url) { return invoke("open_gaming_external", { url: url }); };
+  window.__gcOpenProviderAuthorization = function (url) { return invoke("open_provider_authorization", { url: url }); };
   window.__gcOpenTikTokPost = function (url) { return invoke("open_tiktok_post", { url: url }); };
   window.__gcEpicLibrary = {
     list: function () { return invoke("epic_installed_games"); },

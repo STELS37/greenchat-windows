@@ -931,7 +931,7 @@ export function createApp(deps: AppDeps): App {
       return;
     }
     if (r.name === "social") {
-      swap("social", () => wrapInShell(createSocialScreen({ locale: i18n.locale,
+      swap("social", () => wrapInShell(createSocialScreen({ locale: i18n.locale, api,
         onBack: () => router.navigate("/settings") }), "settings"));
       return;
     }

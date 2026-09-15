@@ -41,6 +41,21 @@ fn open_gaming_external(url: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn open_provider_authorization(url: String) -> Result<(), String> {
+    let parsed = Url::parse(&url).map_err(|_| "Invalid authorization URL")?;
+    let destination = matches!((parsed.host_str(), parsed.path()),
+        (Some("www.epicgames.com"), "/id/authorize") |
+        (Some("www.tiktok.com"), "/v2/auth/authorize/"));
+    if parsed.scheme() != "https" || !destination || !parsed.username().is_empty()
+        || parsed.password().is_some() || parsed.port().is_some() || parsed.fragment().is_some()
+        || !parsed.query_pairs().any(|(k, v)| k == "response_type" && v == "code")
+        || !parsed.query_pairs().any(|(k, v)| k == "state" && !v.is_empty()) {
+        return Err("Invalid authorization URL".into());
+    }
+    open_provider_browser(parsed)
+}
+
+#[tauri::command]
 fn open_tiktok_post(url: String) -> Result<(), String> {
     let parsed = Url::parse(&url).map_err(|_| "Invalid TikTok URL")?;
     let parts: Vec<_> = parsed.path().trim_end_matches('/').split('/').collect();
@@ -518,6 +533,7 @@ pub fn run() {
             app_version,
             desktop_identity,
             open_gaming_external,
+            open_provider_authorization,
             open_tiktok_post,
             epic::epic_installed_games,
             epic::epic_launch_game,
