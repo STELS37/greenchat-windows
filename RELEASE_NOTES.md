@@ -1,14 +1,11 @@
-# GreenChat for Windows 1.0.0-beta.7
+# GreenChat for Windows 1.0.0-beta.8
 
-Gamer Mode is now reachable from More and Profile, with the animated design introduced in PR #17.
+This update adds usable Epic launcher and TikTok public-post features. It does not complete account linking for those providers.
 
-- Steam uses official OpenID sign-in in the system browser. FACEIT links through the verified Steam identity.
-- Current game, Steam level/friends and FACEIT level/ELO come from the GreenChat gaming API.
-- Enabling the mode and changing account/game/rank visibility saves to the server. Failed writes require a refresh and never claim success.
-- Light/dark themes, responsive cards, live particles and reduced-motion support. Turning the mode off pauses the background.
-- Epic Games stays in Gamer Mode. Its store can be opened, but account linking is unavailable until the server implements it. TikTok is not shown in Gamer Mode.
-- Missing achievements, playtime and library totals are shown as unavailable instead of invented data.
+- More → Social feed opens a dedicated TikTok screen. Paste a full public video/photo URL to load the official TikTok player. Nothing is loaded from TikTok before selecting Watch. Tracking parameters are removed, frames are restricted to the official player, and leaving the screen stops playback.
+- If the embedded player is unavailable, the original post can be opened in the system browser. Actual playback depends on TikTok availability and the post's visibility; it was not verified in the development browser because the official player was unavailable there.
+- Gamer Mode → Epic Games on this computer reads installed games from Epic Games Launcher after the user selects Find installed games. Play hands the selected installed game's identifier to the official launcher. No launcher credentials, arbitrary executable paths or account tokens are read.
+- The installed game list is local and is not proof of a linked Epic account. TikTok Login Kit/Display API and Epic account linking still require registered provider applications and server integration.
+- Steam/FACEIT remain in Gamer Mode. TikTok appears only in Social feed.
 
-Windows packaging now keeps generated TDLib resources separate from tracked source. The two-stage build retains clean-source, architecture and Microsoft Defender checks.
-
-The repository currently has SignPath disabled. An unsigned candidate has no trusted Authenticode signature and must never be described as a signed release or installed through the signed auto-updater.
+The unsigned prerelease is intended for manual installation. SignPath remains disabled; these artifacts must not be distributed through the signed automatic updater.

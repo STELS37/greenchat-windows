@@ -69,6 +69,7 @@ export const ru: Dict = {
   // Every sibling has a hint written for this box; this is the one the family was missing.
   "more.miniappsHint": "Без установки и внешних аккаунтов",
   "more.gamerHint": "Steam, FACEIT и Epic Games",
+  "more.socialHint": "Публичные видео TikTok",
 
   "shell.contacts": "Контакты",
   "more.contactsHint": "Адресная книга и поиск людей",

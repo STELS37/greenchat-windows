@@ -5,6 +5,7 @@
 // is injected as an init script with host identity, persisted session and server origin substituted at launch.
 mod crashlog;
 mod deeplink;
+mod epic;
 mod telegram;
 mod version;
 
@@ -36,6 +37,24 @@ fn open_gaming_external(url: String) -> Result<(), String> {
         || !matches!(parsed.host_str(), Some("steamcommunity.com" | "faceit.com" | "www.faceit.com" | "store.epicgames.com")) {
         return Err("Invalid provider URL".into());
     }
+    open_provider_browser(parsed)
+}
+
+#[tauri::command]
+fn open_tiktok_post(url: String) -> Result<(), String> {
+    let parsed = Url::parse(&url).map_err(|_| "Invalid TikTok URL")?;
+    let parts: Vec<_> = parsed.path().trim_end_matches('/').split('/').collect();
+    if parsed.scheme() != "https" || parsed.host_str() != Some("www.tiktok.com")
+        || !parsed.username().is_empty() || parsed.password().is_some() || parsed.port().is_some()
+        || parsed.query().is_some() || parsed.fragment().is_some() || parts.len() != 4
+        || !parts[1].starts_with('@') || !matches!(parts[2], "video" | "photo")
+        || !(15..=22).contains(&parts[3].len()) || !parts[3].bytes().all(|b| b.is_ascii_digit()) {
+        return Err("Invalid TikTok URL".into());
+    }
+    open_provider_browser(parsed)
+}
+
+fn open_provider_browser(parsed: Url) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     let mut command = {
         use std::os::windows::process::CommandExt;
@@ -499,6 +518,9 @@ pub fn run() {
             app_version,
             desktop_identity,
             open_gaming_external,
+            open_tiktok_post,
+            epic::epic_installed_games,
+            epic::epic_launch_game,
             update_target,
             must_force_update,
             check_update,

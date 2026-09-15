@@ -67,6 +67,7 @@ export const en: Dict = {
   // one did not, because Cyrillic is wider at this size.
   "more.miniappsHint": "Open without installs or extra accounts",
   "more.gamerHint": "Steam, FACEIT and Epic Games",
+  "more.socialHint": "Public TikTok videos",
 
   "shell.contacts": "Contacts",
   "more.contactsHint": "Your address book and people search",

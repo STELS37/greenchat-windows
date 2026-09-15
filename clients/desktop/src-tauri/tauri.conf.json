@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.tauri.app/config/2",
   "productName": "Green Chat",
-  "version": "1.0.0-beta.7",
+  "version": "1.0.0-beta.8",
   "identifier": "app.greenchat.desktop",
   "build": {
     "frontendDist": "../../web/dist"
@@ -10,7 +10,7 @@
     "withGlobalTauri": true,
     "windows": [],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'"
+      "csp": "default-src 'self'; frame-src https://www.tiktok.com/player/v1/; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' ws: wss: http: https:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'"
     }
   },
   "plugins": {
